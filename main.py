@@ -11,6 +11,7 @@ from sync_engine import SyncEngine
 from google_connector import GoogleContactsConnector
 from square_connector import SquareConnector
 from webform_connector import WebFormConnector
+from webhook_handler import WebhookHandler
 
 
 def setup_connectors(engine: SyncEngine, config: dict):
@@ -77,7 +78,7 @@ def main():
     
     parser.add_argument(
         'command',
-        choices=['sync', 'stats', 'export', 'import', 'webform'],
+        choices=['sync', 'stats', 'export', 'import', 'webform', 'webhook'],
         help='Command to execute'
     )
     
@@ -97,6 +98,13 @@ def main():
         '--host',
         default='127.0.0.1',
         help='Host for web form server (default: 127.0.0.1). Use 0.0.0.0 to expose on all interfaces.'
+    )
+    
+    parser.add_argument(
+        '--webhook-port',
+        type=int,
+        default=5001,
+        help='Port for webhook server (default: 5001)'
     )
     
     args = parser.parse_args()
@@ -174,6 +182,15 @@ def main():
         
         webform = engine.connectors['webform']
         webform.run(host=args.host, port=args.port)
+    
+    elif args.command == 'webhook':
+        print("\nStarting webhook server for real-time sync...")
+        print("This server listens for webhook notifications from Square and other sources")
+        print("Configure webhook URLs in Square Developer Dashboard:")
+        print(f"  Square webhook URL: http://{args.host}:{args.webhook_port}/webhooks/square")
+        
+        webhook_handler = WebhookHandler(engine, store)
+        webhook_handler.run(host=args.host, port=args.webhook_port)
 
 
 if __name__ == '__main__':

@@ -39,6 +39,15 @@ This will:
 - Merge duplicates intelligently
 - Push updates back to Google and Square
 
+### Enable Real-Time Sync (Square Webhooks)
+```bash
+# Start webhook server
+python main.py webhook
+```
+Configure webhook URL in Square Dashboard to receive instant notifications when contacts change.
+
+**See [WEBHOOKS.md](WEBHOOKS.md) for complete webhook setup guide.**
+
 ### View Statistics
 ```bash
 python main.py stats

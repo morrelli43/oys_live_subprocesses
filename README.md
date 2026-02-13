@@ -8,6 +8,7 @@ A contact synchronization system that connects Google Contacts, Square Up, and a
 - **Smart Merging**: Automatically merge duplicate contacts while preserving all information
 - **Bidirectional Sync**: Push updates back to Google Contacts and Square Up
 - **Change Detection**: When a contact is updated in one source, the change propagates to others
+- **Real-Time Webhooks**: Instant sync when Square contacts change (see [WEBHOOKS.md](WEBHOOKS.md))
 - **Web Form**: Simple web interface for collecting new contacts
 
 ## Architecture
@@ -20,7 +21,8 @@ The system consists of several components:
    - Square Up (`square_connector.py`)
    - Web Form (`webform_connector.py`)
 3. **Sync Engine** (`sync_engine.py`): Orchestrates synchronization across all sources
-4. **Main Application** (`main.py`): CLI interface for running sync operations
+4. **Webhook Handler** (`webhook_handler.py`): Receives real-time notifications from Square
+5. **Main Application** (`main.py`): CLI interface for running sync operations
 
 ## Installation
 
@@ -112,6 +114,33 @@ python main.py webform --port 5000
 ```
 
 Access the form at `http://localhost:5000`
+
+### Start Webhook Server (Real-Time Sync)
+
+For instant synchronization when Square contacts change:
+```bash
+python main.py webhook --webhook-port 5001
+```
+
+Configure the webhook URL in Square Dashboard. See [WEBHOOKS.md](WEBHOOKS.md) for detailed setup instructions.
+
+## Sync Methods
+
+The system supports two synchronization methods:
+
+1. **Scheduled/Manual Sync** (All sources)
+   ```bash
+   python main.py sync
+   ```
+   Run manually or schedule with cron for periodic synchronization.
+
+2. **Real-Time Webhooks** (Square only)
+   ```bash
+   python main.py webhook
+   ```
+   Receives instant notifications when Square contacts change. Google Contacts doesn't support webhooks, so use scheduled sync for Google.
+
+**📖 For webhook setup and real-time sync, see [WEBHOOKS.md](WEBHOOKS.md)**
 
 ## How It Works
 
