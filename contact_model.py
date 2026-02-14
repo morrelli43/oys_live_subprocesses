@@ -2,7 +2,7 @@
 Contact data model with merge capabilities.
 """
 from typing import Dict, List, Optional, Set
-from datetime import datetime
+from datetime import datetime, timezone
 
 
 class Contact:
@@ -17,7 +17,7 @@ class Contact:
         self.company: Optional[str] = None
         self.notes: Optional[str] = None
         self.source_ids: Dict[str, str] = {}  # source_name -> source_id
-        self.last_modified: datetime = datetime.now()
+        self.last_modified: datetime = datetime.now(timezone.utc)
         self.addresses: List[Dict[str, str]] = []
         self.extra_fields: Dict[str, str] = {}
     
@@ -75,9 +75,12 @@ class Contact:
              if f'escooter{i+1}' in self.extra_fields:
                  del self.extra_fields[f'escooter{i+1}']
         
-        # Update timestamp
-        if other.last_modified > self.last_modified:
-            self.last_modified = other.last_modified
+        # Update timestamp (ensure both are aware for comparison)
+        self_mod = self.last_modified if self.last_modified.tzinfo else self.last_modified.replace(tzinfo=timezone.utc)
+        other_mod = other.last_modified if other.last_modified.tzinfo else other.last_modified.replace(tzinfo=timezone.utc)
+        
+        if other_mod > self_mod:
+            self.last_modified = other_mod
         
         return self
     
@@ -112,7 +115,10 @@ class Contact:
         contact.extra_fields = data.get('extra_fields', {})
         
         if 'last_modified' in data:
-            contact.last_modified = datetime.fromisoformat(data['last_modified'])
+            dt = datetime.fromisoformat(data['last_modified'])
+            if dt.tzinfo is None:
+                dt = dt.replace(tzinfo=timezone.utc)
+            contact.last_modified = dt
         
         return contact
     

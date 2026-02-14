@@ -4,7 +4,7 @@ Web Form connector for collecting contacts.
 from typing import List
 from flask import Flask, request, jsonify, render_template_string
 from flask_cors import CORS
-from datetime import datetime
+from datetime import datetime, timezone
 import json
 import os
 
@@ -125,7 +125,7 @@ class WebFormConnector:
             'company': data.get('company', ''),
             'notes': data.get('notes', ''),
             'escooter1': escooter1,
-            'timestamp': data.get('timestamp') or datetime.now().isoformat()
+            'timestamp': data.get('timestamp') or datetime.now(timezone.utc).isoformat()
         }
         
         self.stored_contacts.append(contact_data)
@@ -165,7 +165,10 @@ class WebFormConnector:
             # Use timestamp as source ID to ensure uniqueness
             if 'timestamp' in data:
                 contact.source_ids['webform'] = data['timestamp']
-                contact.last_modified = datetime.fromisoformat(data['timestamp'])
+                dt = datetime.fromisoformat(data['timestamp'])
+                if dt.tzinfo is None:
+                    dt = dt.replace(tzinfo=timezone.utc)
+                contact.last_modified = dt
             
             contacts.append(contact)
         

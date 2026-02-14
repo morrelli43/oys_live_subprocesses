@@ -2,7 +2,7 @@
 Sync engine for coordinating contact synchronization.
 """
 from typing import List, Dict, Set
-from datetime import datetime
+from datetime import datetime, timezone
 import json
 import os
 
@@ -30,7 +30,7 @@ class SyncEngine:
         """Save sync state to file."""
         state = {
             'last_sync_times': self.last_sync_times,
-            'last_updated': datetime.now().isoformat()
+            'last_updated': datetime.now(timezone.utc).isoformat()
         }
         with open(self.state_file, 'w') as f:
             json.dump(state, f, indent=2)
@@ -87,7 +87,7 @@ class SyncEngine:
         success = self.push_to_all_sources(merged_contacts)
         
         # Update sync times
-        current_time = datetime.now().isoformat()
+        current_time = datetime.now(timezone.utc).isoformat()
         for name in self.connectors.keys():
             self.last_sync_times[name] = current_time
         
