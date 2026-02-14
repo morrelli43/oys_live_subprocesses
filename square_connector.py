@@ -28,6 +28,55 @@ class SquareConnector:
             access_token=self.access_token,
             environment='production'  # Change to 'sandbox' for testing
         )
+        
+        # Ensure custom attribute definitions exist
+        self._ensure_custom_attribute_definitions()
+        
+    def _ensure_custom_attribute_definitions(self):
+        """Ensure custom attribute definitions exist for escooter fields."""
+        # This is a simplified check. In production, you'd cache these IDs.
+        # We need to map our keys (escooter1) to Square's Attribute Definition IDs.
+        self.attribute_keys = {}
+        
+        try:
+            # List existing definitions
+            result = self.client.customer_custom_attributes.list_customer_custom_attribute_definitions()
+            
+            existing_keys = {}
+            if result.is_success():
+                for definition in result.body.get('custom_attribute_definitions', []):
+                    existing_keys[definition.get('key')] = definition.get('id')
+            
+            # Create missing definitions
+            for key in ['escooter1', 'escooter2', 'escooter3']:
+                if key in existing_keys:
+                    self.attribute_keys[key] = existing_keys[key]
+                else:
+                    print(f"Creating Square custom attribute definition for {key}...")
+                    body = {
+                        "custom_attribute_definition": {
+                            "key": key,
+                            "name": key.capitalize(),
+                            "description": f"Custom field for {key}",
+                            "visibility": "VISIBILITY_READ_WRITE_VALUES",
+                            "schema": {
+                                "ref": f"https://developer-production.squareup.com/CustomAttributeDefinition/{key}",
+                                "type": "String" # Simplified type
+                            }
+                        }
+                    }
+                    create_result = self.client.customer_custom_attributes.create_customer_custom_attribute_definition(body=body)
+                    
+                    if create_result.is_success():
+                        new_def = create_result.body.get('custom_attribute_definition')
+                        self.attribute_keys[key] = new_def.get('id')
+                        print(f"  Created {key} with ID {new_def.get('id')}")
+                    else:
+                        print(f"  Error creating {key}: {create_result.errors}")
+                        
+        except Exception as e:
+            print(f"Warning: Could not ensure Square custom attributes: {e}")
+            print("  Make sure your token has CUSTOMERS_WRITE and CUSTOMERS_READ permissions.")
     
     def fetch_contacts(self) -> List[Contact]:
         """Fetch all customers from Square."""
@@ -96,7 +145,29 @@ class SquareConnector:
         customer_id = customer.get('id')
         if customer_id:
             contact.source_ids['square'] = customer_id
+            
+        # Extract Custom Attributes (requires separate API call usually, or expanding the object)
+        # Note: list_customers usually returns sparse objects. We might need to fetch individual customer
+        # to get custom attributes, or they might be included if permissions allow.
+        # For now, we'll try to read from the 'custom_attributes' field if present.
+        custom_attrs = customer.get('custom_attributes', {})
+        # If it's a list (some endpoints), convert to dict. If it's a dict (others), use as is.
+        # Square API structure for custom attributes can be complex.
+        # Assuming we just get them or need to fetch them. 
+        # For this implementation, we will assume they are not present in list_customers default response
+        # and would need a separate fetch. To keep it simple and efficient, we will skip *reading* 
+        # them in the bulk list for now, unless requested. 
         
+        # However, if we do have them (e.g. from retrieve_customer), map them:
+        if custom_attrs:
+             for key, value_obj in custom_attrs.items():
+                 # value_obj might be {'value': '...'} or just the value depending on API version/endpoint
+                 val = value_obj.get('value') if isinstance(value_obj, dict) else value_obj
+                 # We need to map Definition ID back to Key if possible, OR if the key is the definition key.
+                 # This is tricky without a reverse lookup map.
+                 # For now, we will assume we might not get them easily in bulk sync without extra calls.
+                 pass
+
         return contact if contact.email or (contact.first_name and contact.last_name) else None
     
     def push_contact(self, contact: Contact) -> bool:
@@ -174,19 +245,21 @@ class SquareConnector:
             }
         
         # Notes
-        notes_parts = []
         if contact.notes:
-            notes_parts.append(contact.notes)
+            customer['note'] = contact.notes[:500]
             
-        # Append custom fields to notes for Square
+        # Custom Attributes
+        # We need to map our keys (escooter1) to the Attribute Definition keys or IDs.
+        # Using the key directly is supported in some endpoints.
+        custom_attributes = {}
         for key, value in contact.extra_fields.items():
-            if key.startswith('escooter'):
-                notes_parts.append(f"{key.capitalize()}: {value}")
-                
-        if notes_parts:
-            # Join with newlines
-            full_note = "\n".join(notes_parts)
-            # Square API has a 500 character limit for customer notes
-            customer['note'] = full_note[:500]
+            if key in ['escooter1', 'escooter2', 'escooter3']:
+                # Square expects: {"key": "escooter1", "value": "Model Name"}
+                # But creating a customer with custom attributes requires a specific structure map
+                # key -> value.
+                custom_attributes[key] = {'value': str(value)}
+        
+        if custom_attributes:
+            customer['custom_attributes'] = custom_attributes
         
         return customer

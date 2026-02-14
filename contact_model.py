@@ -46,7 +46,34 @@ class Contact:
                 self.addresses.append(addr)
         
         # Merge extra fields
-        self.extra_fields.update(other.extra_fields)
+        # specific logic for escooter fields to fill sequentially
+        escooter_values = []
+        
+        # Collect existing values
+        for key in ['escooter1', 'escooter2', 'escooter3']:
+            if self.extra_fields.get(key):
+                escooter_values.append(self.extra_fields[key])
+        
+        # Collect new values
+        for key in ['escooter1', 'escooter2', 'escooter3']:
+            if other.extra_fields.get(key):
+                val = other.extra_fields[key]
+                if val not in escooter_values:
+                    escooter_values.append(val)
+        
+        # Update other extra fields (non-escooter)
+        for k, v in other.extra_fields.items():
+            if not k.startswith('escooter'):
+                self.extra_fields[k] = v
+                
+        # Redistribute escooter values
+        for i, val in enumerate(escooter_values[:3]): # Max 3
+            self.extra_fields[f'escooter{i+1}'] = val
+            
+        # Clear any remaining higher indices if count reduced (unlikely in additive merge but good practice)
+        for i in range(len(escooter_values), 3):
+             if f'escooter{i+1}' in self.extra_fields:
+                 del self.extra_fields[f'escooter{i+1}']
         
         # Update timestamp
         if other.last_modified > self.last_modified:
