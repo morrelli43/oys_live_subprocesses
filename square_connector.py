@@ -200,7 +200,10 @@ class SquareConnector:
         
         if result.is_success():
             customer = result.body.get('customer', {})
-            contact.source_ids['square'] = customer.get('id')
+            customer_id = customer.get('id')
+            contact.source_ids['square'] = customer_id
+            # Sync custom attributes separately
+            self._sync_custom_attributes(customer_id, contact)
         else:
             print(f"Error creating Square customer: {result.errors}")
     
@@ -214,7 +217,10 @@ class SquareConnector:
             body=body
         )
         
-        if not result.is_success():
+        if result.is_success():
+            # Sync custom attributes separately
+            self._sync_custom_attributes(customer_id, contact)
+        else:
             print(f"Error updating Square customer: {result.errors}")
     
     def _contact_to_customer(self, contact: Contact) -> dict:
@@ -263,18 +269,23 @@ class SquareConnector:
         if contact.notes:
             customer['note'] = contact.notes[:500]
             
-        # Custom Attributes
-        # We need to map our keys (escooter1) to the Attribute Definition keys or IDs.
-        # Using the key directly is supported in some endpoints.
-        custom_attributes = {}
+        return customer
+
+    def _sync_custom_attributes(self, customer_id: str, contact: Contact):
+        """Sync custom attributes for a customer using the upsert endpoint."""
         for key, value in contact.extra_fields.items():
             if key in ['escooter1', 'escooter2', 'escooter3']:
-                # Square expects: {"key": "escooter1", "value": "Model Name"}
-                # But creating a customer with custom attributes requires a specific structure map
-                # key -> value.
-                custom_attributes[key] = {'value': str(value)}
-        
-        if custom_attributes:
-            customer['custom_attributes'] = custom_attributes
-        
-        return customer
+                try:
+                    body = {
+                        "custom_attribute": {
+                            "value": str(value)
+                        }
+                    }
+                    # Value can be upserted using the key directly
+                    self.client.customer_custom_attributes.upsert_customer_custom_attribute(
+                        customer_id=customer_id,
+                        key=key,
+                        body=body
+                    )
+                except Exception as e:
+                    print(f"  Error upserting Square attribute {key}: {e}")
