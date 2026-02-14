@@ -70,6 +70,36 @@ SQUARE_ACCESS_TOKEN=your_token_here
 
 The web form is enabled by default and requires no additional configuration. Contacts are stored in `webform_contacts.json`.
 
+## Docker
+
+Build the image:
+```bash
+docker build -t contact-sync .
+```
+
+Run sync using your `.env` file (mounting the project directory keeps data files like `webform_contacts.json`):
+```bash
+docker run --env-file .env -v $(pwd):/app contact-sync sync
+```
+
+Example `docker-compose.yml`:
+```yaml
+services:
+  contact-sync:
+    build: .
+    command: ["sync"]
+    env_file: .env
+    volumes:
+      - ./:/app
+    ports:
+      - "5000:5000"   # webform
+      - "5001:5001"   # webhook
+```
+
+For web servers, expose all interfaces inside the container:
+- Web form: `docker compose run --service-ports contact-sync webform --host 0.0.0.0 --port 5000`
+- Webhook server: `docker compose run --service-ports contact-sync webhook --host 0.0.0.0 --webhook-port 5001`
+
 ## Usage
 
 ### Synchronize Contacts
