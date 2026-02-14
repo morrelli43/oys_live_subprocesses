@@ -17,9 +17,3 @@ services:
       - ~/dockerhub/permadata/oys_contacts/env_files:/app/env_files
     ports:
       - "7173:7173"
-    networks:
-      - shared-net
-
-networks:
-  shared-net:
-    external: true
