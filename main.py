@@ -86,6 +86,13 @@ def main():
         '--file',
         help='File for import/export operations'
     )
+
+    parser.add_argument(
+        '--format',
+        choices=['json', 'vcard'],
+        default='json',
+        help='Format for export (default: json)'
+    )
     
     parser.add_argument(
         '--port',
@@ -156,12 +163,25 @@ def main():
             print(f"  {source}: {time or 'Never'}")
     
     elif args.command == 'export':
-        filename = args.file or 'contacts_export.json'
+        filename = args.file
+        if not filename:
+            filename = 'contacts.vcf' if args.format == 'vcard' else 'contacts_export.json'
+            
         # First sync to get latest data
         if engine.connectors:
             source_contacts = engine.fetch_all_contacts()
             engine.merge_contacts(source_contacts)
-        engine.export_contacts(filename)
+        
+        if args.format == 'vcard':
+            contacts = engine.store.get_all_contacts()
+            with open(filename, 'w') as f:
+                for contact in contacts:
+                    f.write(contact.to_vcard())
+                    f.write('\n')
+            print(f"Exported {len(contacts)} contacts to {filename} in vCard format.")
+        else:
+            engine.export_contacts(filename)
+            print(f"Exported contacts to {filename} in JSON format.")
     
     elif args.command == 'import':
         if not args.file:

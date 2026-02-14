@@ -80,6 +80,7 @@ class SquareConnector:
         if address:
             contact.addresses.append({
                 'street': address.get('address_line_1', ''),
+                'street2': address.get('address_line_2', ''),
                 'city': address.get('locality', ''),
                 'state': address.get('administrative_district_level_1', ''),
                 'postal_code': address.get('postal_code', ''),
@@ -165,6 +166,7 @@ class SquareConnector:
             addr = contact.addresses[0]  # Square supports one address
             customer['address'] = {
                 'address_line_1': addr.get('street', ''),
+                'address_line_2': addr.get('street2', ''),
                 'locality': addr.get('city', ''),
                 'administrative_district_level_1': addr.get('state', ''),
                 'postal_code': addr.get('postal_code', ''),
@@ -172,8 +174,19 @@ class SquareConnector:
             }
         
         # Notes
+        notes_parts = []
         if contact.notes:
+            notes_parts.append(contact.notes)
+            
+        # Append custom fields to notes for Square
+        for key, value in contact.extra_fields.items():
+            if key.startswith('escooter'):
+                notes_parts.append(f"{key.capitalize()}: {value}")
+                
+        if notes_parts:
+            # Join with newlines
+            full_note = "\n".join(notes_parts)
             # Square API has a 500 character limit for customer notes
-            customer['note'] = contact.notes[:500]
+            customer['note'] = full_note[:500]
         
         return customer

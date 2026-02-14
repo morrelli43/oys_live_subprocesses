@@ -89,6 +89,66 @@ class Contact:
         
         return contact
     
+    def to_vcard(self) -> str:
+        """Convert contact to vCard string format (v3.0)."""
+        lines = ['BEGIN:VCARD', 'VERSION:3.0']
+        
+        # Name
+        n_parts = [
+            self.last_name or '',
+            self.first_name or '',
+            '', '', ''
+        ]
+        lines.append(f"N:{';'.join(n_parts)}")
+        
+        fn = f"{self.first_name or ''} {self.last_name or ''}".strip()
+        if fn:
+            lines.append(f"FN:{fn}")
+        
+        # Email
+        if self.email:
+            lines.append(f"EMAIL;TYPE=INTERNET:{self.email}")
+        
+        # Phone
+        if self.phone:
+            lines.append(f"TEL;TYPE=CELL:{self.phone}")
+            
+        # Company
+        if self.company:
+            lines.append(f"ORG:{self.company}")
+            
+        # Address (vCard 3.0 ADR expects: PO Box; Ext Address; Street; City; Region; Postal Code; Country)
+        for addr in self.addresses:
+            # Map street2 to Extended Address (or append to street if preferred, but ADR has a slot for it)
+            # Standard: [PO Box]; [Extended Address]; [Street Address]; [Locality]; [Region]; [Postal Code]; [Country]
+            street1 = addr.get('street', '')
+            street2 = addr.get('street2', '')
+            
+            adr_parts = [
+                '',
+                street2,  # Extended Address (Apt/Suite)
+                street1,  # Street Address
+                addr.get('city', ''),
+                addr.get('state', ''),
+                addr.get('postal_code', ''),
+                addr.get('country', '')
+            ]
+            lines.append(f"ADR;TYPE=HOME:{';'.join(adr_parts)}")
+            
+        # Notes
+        if self.notes:
+            lines.append(f"NOTE:{self.notes}")
+            
+        # Custom Fields (X-ESCOOTER1, etc.)
+        for key, value in self.extra_fields.items():
+            if key.startswith('escooter'):
+                # Normalize key to uppercase X- format
+                field_name = f"X-{key.upper()}"
+                lines.append(f"{field_name}:{value}")
+                
+        lines.append('END:VCARD')
+        return '\n'.join(lines)
+
     def __repr__(self):
         return f"Contact({self.first_name} {self.last_name}, {self.email})"
 
@@ -99,13 +159,31 @@ class ContactStore:
     def __init__(self):
         self.contacts: Dict[str, Contact] = {}
         self.email_index: Dict[str, str] = {}  # email -> contact_id
+        self.phone_index: Dict[str, str] = {}  # phone -> contact_id
     
     def add_contact(self, contact: Contact) -> str:
         """Add or merge a contact. Returns the contact_id."""
+        # Enforce defaults for State and Country if missing
+        for addr in contact.addresses:
+            if not addr.get('state'):
+                addr['state'] = 'Victoria'
+            if not addr.get('country'):
+                addr['country'] = 'Australia'
+
+        existing_id = None
+        
         # Try to find existing contact by email
         if contact.email and contact.email in self.email_index:
             existing_id = self.email_index[contact.email]
+            
+        # Try to find existing contact by phone if not found by email
+        if not existing_id and contact.phone and contact.phone in self.phone_index:
+            existing_id = self.phone_index[contact.phone]
+            
+        if existing_id:
             self.contacts[existing_id].merge_with(contact)
+            # Update indexes with merged data (in case missing fields were filled)
+            self._update_indexes(self.contacts[existing_id])
             return existing_id
         
         # Generate ID if needed
@@ -113,12 +191,16 @@ class ContactStore:
             contact.contact_id = f"contact_{len(self.contacts) + 1}"
         
         self.contacts[contact.contact_id] = contact
-        
-        # Update email index
-        if contact.email:
-            self.email_index[contact.email] = contact.contact_id
+        self._update_indexes(contact)
         
         return contact.contact_id
+    
+    def _update_indexes(self, contact: Contact):
+        """Update lookup indexes for a contact."""
+        if contact.email:
+            self.email_index[contact.email] = contact.contact_id
+        if contact.phone:
+            self.phone_index[contact.phone] = contact.contact_id
     
     def get_contact(self, contact_id: str) -> Optional[Contact]:
         """Get a contact by ID."""
@@ -136,3 +218,4 @@ class ContactStore:
         """Clear all contacts."""
         self.contacts.clear()
         self.email_index.clear()
+        self.phone_index.clear()

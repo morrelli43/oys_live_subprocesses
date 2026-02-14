@@ -74,7 +74,7 @@ class GoogleContactsConnector:
             results = self.service.people().connections().list(
                 resourceName='people/me',
                 pageSize=1000,
-                personFields='names,emailAddresses,phoneNumbers,organizations,addresses,biographies',
+                personFields='names,emailAddresses,phoneNumbers,organizations,addresses,biographies,userDefined',
                 pageToken=page_token
             ).execute()
             
@@ -119,8 +119,14 @@ class GoogleContactsConnector:
         # Extract addresses
         addresses = person.get('addresses', [])
         for addr in addresses:
+            street_full = addr.get('streetAddress', '')
+            street_parts = street_full.split('\n')
+            street = street_parts[0] if street_parts else ''
+            street2 = street_parts[1] if len(street_parts) > 1 else ''
+            
             contact.addresses.append({
-                'street': addr.get('streetAddress', ''),
+                'street': street,
+                'street2': street2,
                 'city': addr.get('city', ''),
                 'state': addr.get('region', ''),
                 'postal_code': addr.get('postalCode', ''),
@@ -131,6 +137,15 @@ class GoogleContactsConnector:
         bios = person.get('biographies', [])
         if bios:
             contact.notes = bios[0].get('value')
+        
+        # Extract user defined fields (custom fields)
+        user_defined = person.get('userDefined', [])
+        for field in user_defined:
+            key = field.get('key')
+            value = field.get('value')
+            if key and value:
+                # Store as is directly in extra_fields
+                contact.extra_fields[key] = value
         
         # Store Google resource name
         resource_name = person.get('resourceName')
@@ -183,7 +198,7 @@ class GoogleContactsConnector:
         
         self.service.people().updateContact(
             resourceName=resource_name,
-            updatePersonFields='names,emailAddresses,phoneNumbers,organizations,addresses,biographies',
+            updatePersonFields='names,emailAddresses,phoneNumbers,organizations,addresses,biographies,userDefined',
             body=person
         ).execute()
     
@@ -214,8 +229,13 @@ class GoogleContactsConnector:
         if contact.addresses:
             person['addresses'] = []
             for addr in contact.addresses:
+                street_parts = [addr.get('street', '')]
+                street2 = addr.get('street2', '')
+                if street2:
+                    street_parts.append(street2)
+                
                 person['addresses'].append({
-                    'streetAddress': addr.get('street', ''),
+                    'streetAddress': "\n".join(street_parts),
                     'city': addr.get('city', ''),
                     'region': addr.get('state', ''),
                     'postalCode': addr.get('postal_code', ''),
@@ -225,5 +245,14 @@ class GoogleContactsConnector:
         # Notes
         if contact.notes:
             person['biographies'] = [{'value': contact.notes}]
+            
+        # User Defined Fields (Custom Fields)
+        if contact.extra_fields:
+            person['userDefined'] = []
+            for key, value in contact.extra_fields.items():
+                person['userDefined'].append({
+                    'key': key,
+                    'value': value
+                })
         
         return person

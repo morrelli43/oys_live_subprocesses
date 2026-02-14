@@ -50,13 +50,22 @@ class WebFormConnector:
             """Handle contact form submission."""
             data = request.form
             
+            # specific webform fields
+            scooter_name = data.get('scooter_name', '')
+            scooter_model = data.get('scooter_model', '')
+            escooter1 = f"{scooter_name} {scooter_model}".strip()
+
             contact_data = {
                 'first_name': data.get('first_name', ''),
                 'last_name': data.get('last_name', ''),
-                'email': data.get('email', ''),
                 'phone': data.get('phone', ''),
+                'suburb': data.get('suburb', ''), 
+                'email': data.get('email', ''), # Keep email capture if provided, but it might be hidden/optional
                 'company': data.get('company', ''),
                 'notes': data.get('notes', ''),
+                'escooter1': escooter1,
+                # 'escooter2': data.get('escooter2', ''), # Webform only provides #1 for now
+                # 'escooter3': data.get('escooter3', ''),
                 'timestamp': datetime.now().isoformat()
             }
             
@@ -83,6 +92,20 @@ class WebFormConnector:
             contact.phone = data.get('phone')
             contact.company = data.get('company')
             contact.notes = data.get('notes')
+            
+            # Map Suburb to City and set defaults
+            address = {
+                'city': data.get('suburb', ''),
+                'state': 'Victoria',
+                'country': 'Australia'
+            }
+            if address['city']:
+                contact.addresses.append(address)
+            
+            # Map custom fields
+            for key in ['escooter1', 'escooter2', 'escooter3']:
+                if data.get(key):
+                    contact.extra_fields[key] = data[key]
             
             # Use timestamp as source ID to ensure uniqueness
             if 'timestamp' in data:
@@ -192,25 +215,31 @@ CONTACT_FORM_HTML = """
                 <input type="text" id="first_name" name="first_name" required>
             </div>
             <div class="form-group">
-                <label for="last_name">Last Name <span class="required">*</span></label>
+                <label for="last_name">Surname <span class="required">*</span></label>
                 <input type="text" id="last_name" name="last_name" required>
             </div>
             <div class="form-group">
-                <label for="email">Email <span class="required">*</span></label>
-                <input type="email" id="email" name="email" required>
+                <label for="phone">Phone Number <span class="required">*</span></label>
+                <input type="tel" id="phone" name="phone" required>
             </div>
             <div class="form-group">
-                <label for="phone">Phone</label>
-                <input type="tel" id="phone" name="phone">
+                <label for="suburb">Suburb</label>
+                <input type="text" id="suburb" name="suburb">
+            </div>
+            
+            <!-- Scooter Info -->
+            <div class="form-group">
+                <label for="scooter_name">Scooter Name</label>
+                <input type="text" id="scooter_name" name="scooter_name" placeholder="e.g. My Speedster">
             </div>
             <div class="form-group">
-                <label for="company">Company</label>
-                <input type="text" id="company" name="company">
+                <label for="scooter_model">Scooter Model</label>
+                <input type="text" id="scooter_model" name="scooter_model" placeholder="e.g. Xiaomi Pro 2">
             </div>
-            <div class="form-group">
-                <label for="notes">Notes</label>
-                <textarea id="notes" name="notes"></textarea>
-            </div>
+            
+            <!-- Hidden email for compatibility if needed later -->
+            <input type="hidden" name="email" value="">
+
             <button type="submit">Submit Contact</button>
             <div id="message" class="message"></div>
         </form>
