@@ -278,6 +278,28 @@ You can run the application using the pre-built Docker image from the GitHub Con
 
     *Note: Ensure your `.env` file and `env_files/` directory (containing `credentials.json`, etc.) are present in the current directory.*
 
+### Docker Compose Example
+
+Create a `docker-compose.yml` file:
+
+```yaml
+services:
+  contact-sync:
+    image: ghcr.io/morrelli43/contact_sync:main
+    container_name: "contact-sync"
+    # command: ["webform"] # Run webform server
+    # command: ["sync"]    # Run one-time sync
+    environment:
+      - WEBFORM_STORAGE=/data/webform_contacts.json
+      - GOOGLE_CREDENTIALS_FILE=/data/credentials.json
+      - GOOGLE_TOKEN_FILE=/data/token.json
+    volumes:
+      # Mount your data directory to /data
+      - ./env_files:/data
+    ports:
+      - "7173:7173"
+```
+
 ## License
 
 This project is open source. See LICENSE file for details.
