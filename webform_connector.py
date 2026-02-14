@@ -173,6 +173,12 @@ class WebFormConnector:
             contacts.append(contact)
         
         return contacts
+
+    def clear_stored_contacts(self):
+        """Clear the temporary contact storage."""
+        print(f"Clearing webform storage: {self.storage_file}")
+        self.stored_contacts = []
+        self._save_contacts()
     
     def run(self, host: str = '127.0.0.1', port: int = 7173):
         """Run the web form server.

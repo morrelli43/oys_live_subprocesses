@@ -93,6 +93,15 @@ class SyncEngine:
         
         self._save_state()
         
+        # Cleanup transitional sources (like webform queue)
+        if success:
+            for name, connector in self.connectors.items():
+                if hasattr(connector, 'clear_stored_contacts'):
+                    try:
+                        connector.clear_stored_contacts()
+                    except Exception as e:
+                        print(f"  Error clearing {name}: {e}")
+        
         print("\n" + "=" * 60)
         print("Synchronization cycle completed")
         print("=" * 60)
