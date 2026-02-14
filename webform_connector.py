@@ -75,10 +75,20 @@ class WebFormConnector:
                     for item in data:
                         self._process_contact_data(item)
                         count += 1
+                    
+                    # Trigger background sync
+                    if self.engine:
+                        threading.Thread(target=self._trigger_sync).start()
+                        
                     return jsonify({'status': 'success', 'message': f'{count} contacts processed successfully!'})
                 else:
                     # Process single contact object
                     self._process_contact_data(data)
+                    
+                    # Trigger background sync
+                    if self.engine:
+                        threading.Thread(target=self._trigger_sync).start()
+
                     return jsonify({'status': 'success', 'message': 'Contact processed successfully!'})
             else:
                 # Handle standard form submission
