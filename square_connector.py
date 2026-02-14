@@ -56,7 +56,7 @@ class SquareConnector:
                     body = {
                         "custom_attribute_definition": {
                             "key": key,
-                            "name": key.capitalize(),
+                            "name": f"eScooter {key[-1]}",
                             "description": f"Custom field for {key}",
                             "visibility": "VISIBILITY_READ_WRITE_VALUES",
                             "schema": {
