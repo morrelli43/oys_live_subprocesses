@@ -287,15 +287,16 @@ services:
   contact-sync:
     image: ghcr.io/morrelli43/contact_sync:main
     container_name: "contact-sync"
-    # command: ["webform"] # Run webform server
-    # command: ["sync"]    # Run one-time sync
+    restart: unless-stopped
+    # command: ["webform"] # Uncomment to run webform server
+    # command: ["sync"]    # Uncomment to run one-time sync
     environment:
-      - WEBFORM_STORAGE=/data/webform_contacts.json
-      - GOOGLE_CREDENTIALS_FILE=/data/credentials.json
-      - GOOGLE_TOKEN_FILE=/data/token.json
+      - WEBFORM_STORAGE=/app/env_files/webform_contacts.json
+      - GOOGLE_CREDENTIALS_FILE=/app/env_files/credentials.json
+      - GOOGLE_TOKEN_FILE=/app/env_files/token.json
     volumes:
-      # Mount your data directory to /data
-      - ./env_files:/data
+      # Mount the user's specific data directory to /app/env_files
+      - ~/dockerhub/permadata/oys_contacts/env_files:/app/env_files
     ports:
       - "7173:7173"
 ```
