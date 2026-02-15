@@ -96,7 +96,24 @@ class SquareConnector:
                     customers = result.body.get('customers', [])
                     
                     for customer in customers:
-                        contact = self._convert_to_contact(customer)
+                        # Fetch custom attributes for this customer
+                        custom_attrs = {}
+                        try:
+                            cust_id = customer.get('id')
+                            if cust_id:
+                                attr_result = self.client.customer_custom_attributes.list_customer_custom_attributes(customer_id=cust_id)
+                                if attr_result.is_success():
+                                    attrs = attr_result.body.get('custom_attributes', [])
+                                    # Convert list/dict to a usable dict if needed
+                                    for attr in attrs:
+                                        key = attr.get('key')
+                                        val = attr.get('value')
+                                        if key and val is not None:
+                                            custom_attrs[key] = val
+                        except Exception as attr_e:
+                            print(f"Warning: Could not fetch custom attributes for customer {customer.get('id')}: {attr_e}")
+
+                        contact = self._convert_to_contact(customer, custom_attrs)
                         if contact:
                             contacts.append(contact)
                     
@@ -112,7 +129,7 @@ class SquareConnector:
         
         return contacts
     
-    def _convert_to_contact(self, customer: dict) -> Optional[Contact]:
+    def _convert_to_contact(self, customer: dict, custom_attrs: dict = None) -> Optional[Contact]:
         """Convert Square customer to Contact."""
         contact = Contact()
         
@@ -158,28 +175,25 @@ class SquareConnector:
         if customer_id:
             contact.source_ids['square'] = customer_id
             
-        # Extract Custom Attributes (requires separate API call usually, or expanding the object)
-        # Note: list_customers usually returns sparse objects. We might need to fetch individual customer
-        # to get custom attributes, or they might be included if permissions allow.
-        # For now, we'll try to read from the 'custom_attributes' field if present.
-        custom_attrs = customer.get('custom_attributes', {})
-        # If it's a list (some endpoints), convert to dict. If it's a dict (others), use as is.
-        # Square API structure for custom attributes can be complex.
-        # Assuming we just get them or need to fetch them. 
-        # For this implementation, we will assume they are not present in list_customers default response
-        # and would need a separate fetch. To keep it simple and efficient, we will skip *reading* 
-        # them in the bulk list for now, unless requested. 
+        # Extract Custom Attributes
+        custom_attrs = custom_attrs or customer.get('custom_attributes', {})
         
-        # However, if we do have them (e.g. from retrieve_customer), map them:
         if custom_attrs:
-             for key, value_obj in custom_attrs.items():
-                 # value_obj might be {'value': '...'} or just the value depending on API version/endpoint
-                 val = value_obj.get('value') if isinstance(value_obj, dict) else value_obj
-                 # We need to map Definition ID back to Key if possible, OR if the key is the definition key.
-                 # This is tricky without a reverse lookup map.
-                 # For now, we will assume we might not get them easily in bulk sync without extra calls.
-                 pass
-
+             # Square might store them as a list or a dict depending on the endpoint/version
+             if isinstance(custom_attrs, list):
+                 for attr in custom_attrs:
+                     key = attr.get('key')
+                     value = attr.get('value')
+                     if key and value is not None:
+                         if key in ['escooter1', 'escooter2', 'escooter3']:
+                             contact.extra_fields[key] = str(value)
+             else:
+                 for key, value_obj in custom_attrs.items():
+                     # value_obj might be {'value': '...'} or just the value
+                     val = value_obj.get('value') if isinstance(value_obj, dict) else value_obj
+                     if key in ['escooter1', 'escooter2', 'escooter3']:
+                         contact.extra_fields[key] = str(val)
+        
         return contact if contact.email or (contact.first_name and contact.last_name) else None
     
     def push_contact(self, contact: Contact) -> bool:
