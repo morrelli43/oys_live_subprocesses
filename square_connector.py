@@ -226,6 +226,20 @@ class SquareConnector:
         except Exception as e:
             print(f"Error pushing contact to Square: {e}")
             return False
+            
+    def delete_contact(self, customer_id: str) -> bool:
+        """Delete a customer from Square."""
+        try:
+            result = self.client.customers.delete_customer(customer_id=customer_id)
+            if result.is_success():
+                print(f"Deleted customer {customer_id} from Square.")
+                return True
+            else:
+                print(f"Error deleting customer from Square: {result.errors}")
+                return False
+        except Exception as e:
+            print(f"Error deleting customer from Square: {e}")
+            return False
     
     def _create_customer(self, contact: Contact):
         """Create a new customer in Square."""

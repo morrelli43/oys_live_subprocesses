@@ -3,6 +3,8 @@ Contact data model with merge capabilities.
 """
 from typing import Dict, List, Optional, Set
 from datetime import datetime, timezone
+import json
+import os
 
 
 class Contact:
@@ -252,3 +254,25 @@ class ContactStore:
         self.contacts.clear()
         self.email_index.clear()
         self.phone_index.clear()
+
+    def save_to_disk(self, filename: str):
+        """Save contact store to disk."""
+        data = [c.to_dict() for c in self.contacts.values()]
+        with open(filename, 'w') as f:
+            json.dump(data, f, indent=2)
+            
+    def load_from_disk(self, filename: str):
+        """Load contact store from disk."""
+        if not os.path.exists(filename):
+            return
+            
+        with open(filename, 'r') as f:
+            data = json.load(f)
+            
+        self.clear()
+        count = 0
+        for item in data:
+            contact = Contact.from_dict(item)
+            self.add_contact(contact)
+            count += 1
+        print(f"Loaded {count} contacts from persistent store.")

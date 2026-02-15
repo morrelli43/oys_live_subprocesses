@@ -196,6 +196,21 @@ class GoogleContactsConnector:
         except Exception as e:
             print(f"Error pushing contact to Google: {e}")
             return False
+            
+    def delete_contact(self, resource_name: str) -> bool:
+        """Delete a contact from Google Contacts."""
+        if not self.service:
+            self.authenticate()
+            
+        try:
+            self.service.people().deleteContact(
+                resourceName=resource_name
+            ).execute()
+            print(f"Deleted contact {resource_name} from Google.")
+            return True
+        except Exception as e:
+            print(f"Error deleting contact from Google: {e}")
+            return False
     
     def _create_contact(self, contact: Contact):
         """Create a new contact in Google."""

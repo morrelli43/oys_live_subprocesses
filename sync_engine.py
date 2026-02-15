@@ -13,12 +13,14 @@ from contact_model import Contact, ContactStore
 class SyncEngine:
     """Coordinates contact synchronization across multiple sources."""
     
-    def __init__(self, store: ContactStore, state_file: str = 'sync_state.json'):
+    def __init__(self, store: ContactStore, state_file: str = 'sync_state.json', contacts_file: str = 'contacts.json'):
         self.store = store
         self.state_file = state_file
+        self.contacts_file = contacts_file
         self.connectors = {}
         self.last_sync_times = {}
         self.lock = threading.Lock()
+        self.store.load_from_disk(self.contacts_file)
         self._load_state()
     
     def _load_state(self):
@@ -72,6 +74,81 @@ class SyncEngine:
         print(f"  Merged into {final_count} unique contacts (from {initial_count})")
         
         return self.store.get_all_contacts()
+
+    def handle_deletions(self, source_contacts: Dict[str, List[Contact]]):
+        """
+        Detect contacts that have been deleted from a source and propagate deletion.
+        A contact is considered deleted if:
+        1. We have it in our persistent store with a source ID for a specific source.
+        2. We successfully fetched contacts from that source.
+        3. The contact is NOT in the fetched list.
+        """
+        print("\nChecking for deletions...")
+        known_contacts = self.store.get_all_contacts()
+        contacts_to_delete = []
+        
+        for contact in known_contacts:
+            is_deleted = False
+            
+            for source_name, fetched_list in source_contacts.items():
+                # Skip if we don't have an ID for this source (was never synced here)
+                if source_name not in contact.source_ids:
+                    continue
+                    
+                # Skip webform as it's not a source of truth for current state (it's a stream)
+                if source_name == 'webform':
+                    continue
+                
+                # Check if this source's ID is missing from fetched list
+                source_id = contact.source_ids[source_name]
+                found = False
+                for fetched in fetched_list:
+                    # Match by source ID (most reliable)
+                    if fetched.source_ids.get(source_name) == source_id:
+                        found = True
+                        break
+                        
+                if not found:
+                    print(f"  Contact {contact.first_name} {contact.last_name} missing from {source_name} (ID: {source_id}) - Marking for deletion")
+                    is_deleted = True
+                    break
+            
+            if is_deleted:
+                contacts_to_delete.append(contact)
+        
+        # Process deletions
+        if contacts_to_delete:
+            print(f"  Found {len(contacts_to_delete)} contacts to delete.")
+            self.propagate_deletions(contacts_to_delete)
+        else:
+            print("  No deletions detected.")
+
+    def propagate_deletions(self, contacts: List[Contact]):
+        """Delete contacts from all sources and local store."""
+        for contact in contacts:
+            print(f"  Propagating deletion for: {contact.first_name} {contact.last_name}")
+            
+            # Delete from all connected sources
+            for name, connector in self.connectors.items():
+                if name in contact.source_ids:
+                    source_id = contact.source_ids[name]
+                    if hasattr(connector, 'delete_contact'):
+                        try:
+                            connector.delete_contact(source_id)
+                        except Exception as e:
+                            print(f"    Error deleting from {name}: {e}")
+            
+            # Remove from local store
+            # Currently ContactStore doesn't have remove, we need to rebuild or add remove.
+            # Adding remove_contact to ContactStore would be better, but for now accessing dict directly
+            if contact.contact_id in self.store.contacts:
+                del self.store.contacts[contact.contact_id]
+                
+            # Clean up indexes
+            if contact.email and contact.email in self.store.email_index:
+                del self.store.email_index[contact.email]
+            if contact.phone and contact.phone in self.store.phone_index:
+                del self.store.phone_index[contact.phone]
     
     def sync_all(self) -> bool:
         """Perform a full synchronization cycle. Thread-safe."""
@@ -87,6 +164,9 @@ class SyncEngine:
             # Fetch contacts from all sources
             source_contacts = self.fetch_all_contacts()
             
+            # Check for deletions
+            self.handle_deletions(source_contacts)
+
             # Merge all contacts
             merged_contacts = self.merge_contacts(source_contacts)
             
@@ -99,6 +179,7 @@ class SyncEngine:
                 self.last_sync_times[name] = current_time
             
             self._save_state()
+            self.store.save_to_disk(self.contacts_file)
             
             # Cleanup transitional sources (like webform queue)
             if success:
