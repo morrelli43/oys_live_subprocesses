@@ -28,16 +28,36 @@ class Contact:
         Merge this contact with another, keeping as much information as possible.
         Prefers non-None values and combines source_ids.
         """
-        # Prefer non-empty values
-        self.first_name = self.first_name or other.first_name
-        self.last_name = self.last_name or other.last_name
-        self.email = self.email or other.email
-        self.phone = self.phone or other.phone
-        self.company = self.company or other.company
+        # Update timestamp (ensure both are aware for comparison)
+        self_mod = self.last_modified if self.last_modified.tzinfo else self.last_modified.replace(tzinfo=timezone.utc)
+        other_mod = other.last_modified if other.last_modified.tzinfo else other.last_modified.replace(tzinfo=timezone.utc)
+        
+        other_is_newer = other_mod > self_mod
+        
+        if other_is_newer:
+            # Other is newer, prefer its values
+            self.first_name = other.first_name or self.first_name
+            self.last_name = other.last_name or self.last_name
+            self.email = other.email or self.email
+            self.phone = other.phone or self.phone
+            self.company = other.company or self.company
+            self.last_modified = other_mod
+        else:
+             # Self is newer, prefer self values
+            self.first_name = self.first_name or other.first_name
+            self.last_name = self.last_name or other.last_name
+            self.email = self.email or other.email
+            self.phone = self.phone or other.phone
+            self.company = self.company or other.company
         
         # Combine notes
-        if other.notes and other.notes not in (self.notes or ''):
-            self.notes = f"{self.notes}\n{other.notes}" if self.notes else other.notes
+        if other.notes:
+            if not self.notes:
+                self.notes = other.notes
+            elif other.notes not in self.notes:
+                 # If other is newer, put its notes first? Or just append? 
+                 # Let's append for now to avoid losing history
+                self.notes = f"{self.notes}\n{other.notes}"
         
         # Merge source IDs
         self.source_ids.update(other.source_ids)
@@ -66,23 +86,20 @@ class Contact:
         # Update other extra fields (non-escooter)
         for k, v in other.extra_fields.items():
             if not k.startswith('escooter'):
-                self.extra_fields[k] = v
+                # If other is newer, overwrite. If self is newer, keep self unless missing
+                if other_is_newer:
+                     self.extra_fields[k] = v
+                elif k not in self.extra_fields:
+                     self.extra_fields[k] = v
                 
         # Redistribute escooter values
         for i, val in enumerate(escooter_values[:3]): # Max 3
             self.extra_fields[f'escooter{i+1}'] = val
             
-        # Clear any remaining higher indices if count reduced (unlikely in additive merge but good practice)
+        # Clear any remaining higher indices if count reduced (unlikely in additive merge)
         for i in range(len(escooter_values), 3):
              if f'escooter{i+1}' in self.extra_fields:
                  del self.extra_fields[f'escooter{i+1}']
-        
-        # Update timestamp (ensure both are aware for comparison)
-        self_mod = self.last_modified if self.last_modified.tzinfo else self.last_modified.replace(tzinfo=timezone.utc)
-        other_mod = other.last_modified if other.last_modified.tzinfo else other.last_modified.replace(tzinfo=timezone.utc)
-        
-        if other_mod > self_mod:
-            self.last_modified = other_mod
         
         return self
     

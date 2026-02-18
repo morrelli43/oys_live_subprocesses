@@ -198,6 +198,8 @@ class SyncEngine:
         finally:
             self.lock.release()
     
+        return success
+    
     def push_to_all_sources(self, contacts: List[Contact]) -> bool:
         """Push merged contacts back to all sources."""
         print("\nPushing contacts to all sources...")
@@ -213,19 +215,30 @@ class SyncEngine:
             
             pushed = 0
             errors = 0
+            skipped = 0
             
             for contact in contacts:
+                # Should we check if push is needed?
+                # Ideally, connectors should handle "no change" efficiently or we check timestamps.
+                # For now, we rely on connectors to be smart or just do it.
+                # But let's log which contacts are being touched.
                 try:
+                    # In a real system, we might check if contact.source_ids[source_name] exists
+                    # AND contact.last_modified > last_sync_time[source_name]
+                    # But sync logic here is "always consistent", so we push.
                     if connector.push_contact(contact):
                         pushed += 1
+                        # Verbose logging for debugging one specific contact if needed
+                        # if contact.first_name == "Beth":
+                        #     print(f"    Pushed Beth to {source_name}")
                     else:
                         errors += 1
                 except Exception as e:
-                    print(f"  Error pushing contact: {e}")
+                    print(f"  Error pushing contact {contact.first_name} {contact.last_name}: {e}")
                     errors += 1
                     success = False
             
-            print(f"  Pushed {pushed} contacts, {errors} errors")
+            print(f"  Pushed {pushed} contacts to {source_name}, {errors} errors")
         
         return success
     

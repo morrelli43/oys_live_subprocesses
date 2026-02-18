@@ -2,7 +2,7 @@
 Unit tests for contact model and sync engine.
 """
 import unittest
-from datetime import datetime
+from datetime import datetime, timezone
 import os
 import json
 
@@ -47,6 +47,35 @@ class TestContact(unittest.TestCase):
         # Check source IDs merged
         self.assertIn('google', contact1.source_ids)
         self.assertIn('square', contact1.source_ids)
+
+    def test_contact_merge_timestamp_precedence(self):
+        """Test that newer contact data overwrites older data."""
+        # Case 1: Other is newer
+        contact1 = Contact('c1')
+        contact1.first_name = 'OldName'
+        contact1.last_modified = datetime(2023, 1, 1, tzinfo=timezone.utc)
+        
+        contact2 = Contact('c2')
+        contact2.first_name = 'NewName'
+        contact2.last_modified = datetime(2023, 1, 2, tzinfo=timezone.utc)
+        
+        contact1.merge_with(contact2)
+        self.assertEqual(contact1.first_name, 'NewName')
+        self.assertEqual(contact1.last_modified, contact2.last_modified)
+        
+        # Case 2: Self is newer
+        contact3 = Contact('c3')
+        contact3.first_name = 'NewerName'
+        contact3.last_modified = datetime(2023, 1, 3, tzinfo=timezone.utc)
+        
+        contact4 = Contact('c4')
+        contact4.first_name = 'OlderName'
+        contact4.last_modified = datetime(2023, 1, 2, tzinfo=timezone.utc)
+        
+        contact3.merge_with(contact4)
+        self.assertEqual(contact3.first_name, 'NewerName')
+        # Should keep the newer timestamp
+        self.assertEqual(contact3.last_modified, datetime(2023, 1, 3, tzinfo=timezone.utc))
     
     def test_contact_to_dict(self):
         """Test converting contact to dictionary."""

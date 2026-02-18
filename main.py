@@ -17,6 +17,9 @@ from webform_connector import WebFormConnector
 from webhook_handler import WebhookHandler
 
 
+VERSION = "1.0.1"
+
+
 def setup_connectors(engine: SyncEngine, config: dict):
     """Setup and register all connectors based on configuration."""
     
@@ -75,8 +78,10 @@ def load_config() -> dict:
 
 def main():
     """Main application entry point."""
+    print(f"Starting Contact Sync Service v{VERSION}")
+    
     parser = argparse.ArgumentParser(
-        description='Contact Sync - Synchronize contacts across Google, Square, and Web Form'
+        description=f'Contact Sync v{VERSION} - Synchronize contacts across Google, Square, and Web Form'
     )
     
     parser.add_argument(
