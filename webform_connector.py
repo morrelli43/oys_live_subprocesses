@@ -121,6 +121,7 @@ class WebFormConnector:
             'last_name': data.get('last_name', ''),
             'phone': data.get('phone', ''),
             'suburb': data.get('suburb', ''), 
+            'postcode': data.get('postcode', ''),
             'email': data.get('email', ''),
             'company': data.get('company', ''),
             'notes': data.get('notes', ''),
@@ -155,13 +156,14 @@ class WebFormConnector:
             contact.company = data.get('company')
             contact.notes = data.get('notes')
             
-            # Map Suburb to City and set defaults
+            # Map Suburb and Postcode to Address and set defaults
             address = {
                 'city': data.get('suburb', ''),
+                'postal_code': data.get('postcode', ''),
                 'state': 'Victoria',
                 'country': 'Australia'
             }
-            if address['city']:
+            if address['city'] or address['postal_code']:
                 contact.addresses.append(address)
             
             # Map custom fields
@@ -296,6 +298,10 @@ CONTACT_FORM_HTML = """
             <div class="form-group">
                 <label for="suburb">Suburb</label>
                 <input type="text" id="suburb" name="suburb">
+            </div>
+            <div class="form-group">
+                <label for="postcode">Postcode</label>
+                <input type="text" id="postcode" name="postcode">
             </div>
             
             <!-- Scooter Info -->
