@@ -17,7 +17,7 @@ from webform_connector import WebFormConnector
 from webhook_handler import WebhookHandler
 
 
-VERSION = "1.0.2"
+VERSION = "1.0.3"
 
 
 def setup_connectors(engine: SyncEngine, config: dict):

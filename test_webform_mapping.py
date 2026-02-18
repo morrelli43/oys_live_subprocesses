@@ -62,6 +62,43 @@ class TestWebFormMapping(unittest.TestCase):
         self.assertEqual(contact.addresses[0]['street'], '123 Test St')
         self.assertEqual(contact.addresses[0]['city'], 'Testville')
 
+    def test_full_address_in_suburb_field(self):
+        """Test parsing when Google Places puts full address in suburb field."""
+        test_data = {
+            'first_name': 'Full',
+            'last_name': 'Address',
+            'suburb': '23 Batman Street, West Melbourne VIC, Australia',
+            'phone': '0422222222'
+        }
+        
+        self.connector._process_contact_data(test_data)
+        contacts = self.connector.fetch_contacts()
+        contact = contacts[0]
+        
+        self.assertEqual(contact.addresses[0]['street'], '23 Batman Street')
+        self.assertEqual(contact.addresses[0]['city'], 'West Melbourne')
+        self.assertEqual(contact.addresses[0]['state'], 'VIC')
+        self.assertEqual(contact.addresses[0]['country'], 'Australia')
+
+    def test_full_address_with_postcode_in_suburb_field(self):
+        """Test parsing address with postcode embedded."""
+        test_data = {
+            'first_name': 'Post',
+            'last_name': 'Code',
+            'suburb': '432 Queen Street, Melbourne VIC 3000, Australia',
+            'phone': '0433333333'
+        }
+        
+        self.connector._process_contact_data(test_data)
+        contacts = self.connector.fetch_contacts()
+        contact = contacts[0]
+        
+        self.assertEqual(contact.addresses[0]['street'], '432 Queen Street')
+        self.assertEqual(contact.addresses[0]['city'], 'Melbourne')
+        self.assertEqual(contact.addresses[0]['state'], 'VIC')
+        self.assertEqual(contact.addresses[0]['postal_code'], '3000')
+        self.assertEqual(contact.addresses[0]['country'], 'Australia')
+
     def tearDown(self):
         import os
         if os.path.exists('test_webform_contacts.json'):

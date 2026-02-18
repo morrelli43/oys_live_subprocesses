@@ -143,6 +143,64 @@ class WebFormConnector:
         
 
     
+    def _parse_address_string(self, full_address: str) -> dict:
+        """Parse a full address string into components.
+        
+        Handles Australian address formats like:
+        - '23 Batman Street, West Melbourne VIC, Australia'
+        - '432 Queen Street, Melbourne VIC 3000, Australia'
+        - '5/10 Smith Rd, Suburb VIC 3000, Australia'
+        """
+        import re
+        
+        result = {
+            'street': '',
+            'city': '',
+            'state': '',
+            'postal_code': '',
+            'country': ''
+        }
+        
+        if not full_address:
+            return result
+        
+        # Split by commas
+        parts = [p.strip() for p in full_address.split(',')]
+        
+        if len(parts) >= 3:
+            # Format: "Street, Suburb STATE [Postcode], Country"
+            result['street'] = parts[0]
+            result['country'] = parts[-1]
+            
+            # Middle part(s) contain suburb, state, and possibly postcode
+            # e.g. "West Melbourne VIC" or "Melbourne VIC 3000"
+            middle = ', '.join(parts[1:-1]).strip()
+            
+            # Try to extract postcode (Australian postcodes are 4 digits)
+            postcode_match = re.search(r'\b(\d{4})\b', middle)
+            if postcode_match:
+                result['postal_code'] = postcode_match.group(1)
+                middle = middle[:postcode_match.start()].strip()
+            
+            # Try to extract state (VIC, NSW, QLD, SA, WA, TAS, NT, ACT)
+            state_match = re.search(r'\b(VIC|NSW|QLD|SA|WA|TAS|NT|ACT|Victoria|New South Wales|Queensland|South Australia|Western Australia|Tasmania|Northern Territory)\b', middle, re.IGNORECASE)
+            if state_match:
+                result['state'] = state_match.group(1)
+                # Everything before the state is the suburb
+                result['city'] = middle[:state_match.start()].strip().rstrip(',')
+            else:
+                result['city'] = middle
+                
+        elif len(parts) == 2:
+            # Format: "Street, Suburb" or "Suburb, Country"
+            result['street'] = parts[0]
+            result['city'] = parts[1]
+        else:
+            # Single string, treat as street
+            result['street'] = full_address
+        
+        return result
+
     def fetch_contacts(self) -> List[Contact]:
         """Fetch all contacts from web form storage."""
         self._load_contacts()
@@ -157,14 +215,42 @@ class WebFormConnector:
             contact.company = data.get('company')
             contact.notes = data.get('notes')
             
-            # Map Suburb and Postcode to Address and set defaults
-            address = {
-                'street': data.get('address', ''),
-                'city': data.get('suburb', ''),
-                'postal_code': data.get('postcode', ''),
-                'state': 'Victoria',
-                'country': 'Australia'
-            }
+            # Get raw address fields
+            raw_address = data.get('address', '')
+            raw_suburb = data.get('suburb', '')
+            raw_postcode = data.get('postcode', '')
+            
+            # Detect if suburb contains a full address string (from Google Places autocomplete)
+            # A full address usually contains commas and state abbreviations
+            if raw_suburb and ',' in raw_suburb:
+                parsed = self._parse_address_string(raw_suburb)
+                address = {
+                    'street': raw_address or parsed['street'],
+                    'city': parsed['city'],
+                    'state': parsed['state'] or 'Victoria',
+                    'postal_code': raw_postcode or parsed['postal_code'],
+                    'country': parsed['country'] or 'Australia'
+                }
+            elif raw_address and ',' in raw_address and not raw_suburb:
+                # Full address might be in the address field instead
+                parsed = self._parse_address_string(raw_address)
+                address = {
+                    'street': parsed['street'],
+                    'city': parsed['city'],
+                    'state': parsed['state'] or 'Victoria',
+                    'postal_code': raw_postcode or parsed['postal_code'],
+                    'country': parsed['country'] or 'Australia'
+                }
+            else:
+                # Normal case: fields are already separated
+                address = {
+                    'street': raw_address,
+                    'city': raw_suburb,
+                    'postal_code': raw_postcode,
+                    'state': 'Victoria',
+                    'country': 'Australia'
+                }
+            
             if address['street'] or address['city'] or address['postal_code']:
                 contact.addresses.append(address)
             
