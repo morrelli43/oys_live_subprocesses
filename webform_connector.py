@@ -120,6 +120,7 @@ class WebFormConnector:
             'first_name': data.get('first_name', ''),
             'last_name': data.get('last_name', ''),
             'phone': data.get('phone', ''),
+            'address': data.get('address', ''),
             'suburb': data.get('suburb', ''), 
             'postcode': data.get('postcode', ''),
             'email': data.get('email', ''),
@@ -135,7 +136,7 @@ class WebFormConnector:
             if key in data:
                 contact_data[key] = data[key]
         
-        print(f"Processed webform contact: {contact_data.get('first_name')} {contact_data.get('last_name')} - Scooter: {escooter_val}")
+        print(f"Processed webform contact: {contact_data.get('first_name')} {contact_data.get('last_name')} - Address: {contact_data.get('address')}")
         self.stored_contacts.append(contact_data)
         self._save_contacts()
         
@@ -158,12 +159,13 @@ class WebFormConnector:
             
             # Map Suburb and Postcode to Address and set defaults
             address = {
+                'street': data.get('address', ''),
                 'city': data.get('suburb', ''),
                 'postal_code': data.get('postcode', ''),
                 'state': 'Victoria',
                 'country': 'Australia'
             }
-            if address['city'] or address['postal_code']:
+            if address['street'] or address['city'] or address['postal_code']:
                 contact.addresses.append(address)
             
             # Map custom fields
@@ -296,6 +298,10 @@ CONTACT_FORM_HTML = """
                 <input type="tel" id="phone" name="phone" required>
             </div>
             <div class="form-group">
+                <label for="address">Street Address</label>
+                <input type="text" id="address" name="address" placeholder="e.g. 123 Main St">
+            </div>
+            <div class="form-group">
                 <label for="suburb">Suburb</label>
                 <input type="text" id="suburb" name="suburb">
             </div>
@@ -315,7 +321,10 @@ CONTACT_FORM_HTML = """
             </div>
             
             <!-- Hidden email for compatibility if needed later -->
-            <input type="hidden" name="email" value="">
+            <div class="form-group">
+                <label for="email">Email Address</label>
+                <input type="email" id="email" name="email" placeholder="john@example.com">
+            </div>
 
             <button type="submit">Submit Contact</button>
             <div id="message" class="message"></div>
