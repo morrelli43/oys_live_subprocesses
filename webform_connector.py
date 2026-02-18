@@ -68,6 +68,10 @@ class WebFormConnector:
             """
             if request.is_json:
                 data = request.json
+                print(f"[SUBMIT] Received JSON keys: {list(data.keys()) if isinstance(data, dict) else 'list'}")
+                if isinstance(data, dict):
+                    print(f"[SUBMIT] Address fields: address_line_1='{data.get('address_line_1', '')}', suburb='{data.get('suburb', '')}', state='{data.get('state', '')}', postcode='{data.get('postcode', '')}', country='{data.get('country', '')}'")
+                    print(f"[SUBMIT] Alt fields: address='{data.get('address', '')}', location='{data.get('location', '')}'")
                 # Handle list of contacts (as per user spec)
                 if isinstance(data, list):
                     # Process each contact in the list
