@@ -11,6 +11,8 @@ services:
       - ENABLE_GOOGLE=true
       - ENABLE_SQUARE=true
       - SQUARE_ACCESS_TOKEN=your_square_access_token_here
+      - SQUARE_WEBHOOK_URL=https://onyascoot.com/webhooks/square
+      - SQUARE_SIGNATURE_KEY=t0Qg_8PNuzr0SGzxcOMBVQ
       - WEBFORM_STORAGE=/app/env_files/webform_contacts.json
       - GOOGLE_CREDENTIALS_FILE=/app/env_files/credentials.json
       - GOOGLE_TOKEN_FILE=/app/env_files/token.json

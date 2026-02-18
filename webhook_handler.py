@@ -24,6 +24,7 @@ class WebhookHandler:
         self.engine = engine
         self.store = store
         self.square_signature_key = os.getenv('SQUARE_SIGNATURE_KEY')
+        self.square_webhook_url = os.getenv('SQUARE_WEBHOOK_URL', '')
         self._setup_routes()
     
     def _setup_routes(self):
@@ -88,7 +89,9 @@ class WebhookHandler:
             return False
         
         # Compute expected signature
-        webhook_url = request.url
+        # Use the configured public URL (what Square signs against)
+        # rather than the internal proxy URL from request.url
+        webhook_url = self.square_webhook_url or request.url
         body = request.get_data()
         
         payload = webhook_url.encode() + body
