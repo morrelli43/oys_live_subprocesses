@@ -95,12 +95,6 @@ class WebhookHandler:
         webhook_url = self.square_webhook_url or request.url
         body = request.get_data()
         
-        print(f"[WEBHOOK DEBUG] Webhook URL used: {webhook_url}")
-        print(f"[WEBHOOK DEBUG] Request URL: {request.url}")
-        print(f"[WEBHOOK DEBUG] Signature key (first 8 chars): {self.square_signature_key[:8]}...")
-        print(f"[WEBHOOK DEBUG] Body length: {len(body)}")
-        print(f"[WEBHOOK DEBUG] Received signature: {signature}")
-        
         # Square signature = Base64(HMAC-SHA256(signature_key, url + body))
         payload = webhook_url.encode() + body
         expected_signature = base64.b64encode(
@@ -110,9 +104,6 @@ class WebhookHandler:
                 hashlib.sha256
             ).digest()
         ).decode()
-        
-        print(f"[WEBHOOK DEBUG] Expected signature: {expected_signature}")
-        print(f"[WEBHOOK DEBUG] Match: {hmac.compare_digest(signature, expected_signature)}")
         
         # Compare signatures (constant-time comparison)
         return hmac.compare_digest(signature, expected_signature)
