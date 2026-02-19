@@ -110,10 +110,10 @@ class WebhookHandler:
     
     def _handle_square_event(self, event_data: dict):
         """
-        Handle Square customer event by triggering selective sync.
+        Handle Square customer event by syncing to non-Square sources.
         
-        Instead of syncing all contacts, we could fetch just the updated
-        customer and merge it. For simplicity, this triggers a full sync.
+        Important: We do NOT push back to Square here to avoid a feedback loop
+        (pushing to Square triggers more customer.updated webhooks).
         """
         try:
             # Extract event details
@@ -132,11 +132,22 @@ class WebhookHandler:
                 for contact in contacts:
                     self.store.add_contact(contact)
                 
-                # Push to other sources
+                # Push to OTHER sources only (not Square) to avoid feedback loop
                 all_contacts = self.store.get_all_contacts()
-                self.engine.push_to_all_sources(all_contacts)
+                for source_name, connector in self.engine.connectors.items():
+                    if source_name == 'square':
+                        continue  # Skip Square — the change came FROM Square
+                    if not hasattr(connector, 'push_contact'):
+                        continue
+                    
+                    print(f"Pushing to {source_name}...")
+                    for contact in all_contacts:
+                        try:
+                            connector.push_contact(contact)
+                        except Exception as e:
+                            print(f"  Error pushing contact to {source_name}: {e}")
                 
-                print(f"Sync triggered by webhook completed successfully")
+                print(f"Sync triggered by Square webhook completed successfully")
         
         except Exception as e:
             print(f"Error handling Square webhook event: {e}")
