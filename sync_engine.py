@@ -145,10 +145,14 @@ class SyncEngine:
                 del self.store.contacts[contact.contact_id]
                 
             # Clean up indexes
-            if contact.email and contact.email in self.store.email_index:
-                del self.store.email_index[contact.email]
-            if contact.phone and contact.phone in self.store.phone_index:
-                del self.store.phone_index[contact.phone]
+            if contact.email:
+                clean_email = contact.email.strip().lower()
+                if clean_email in self.store.email_index:
+                    del self.store.email_index[clean_email]
+            if contact.phone:
+                clean_phone = ''.join(filter(str.isdigit, contact.phone))
+                if clean_phone in self.store.phone_index:
+                    del self.store.phone_index[clean_phone]
     
     def sync_all(self) -> bool:
         """Perform a full synchronization cycle. Thread-safe."""

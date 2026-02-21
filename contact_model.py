@@ -231,12 +231,14 @@ class ContactStore:
         existing_id = None
         
         # Try to find existing contact by email
-        if contact.email and contact.email in self.email_index:
-            existing_id = self.email_index[contact.email]
+        clean_email = contact.email.strip().lower() if contact.email else ""
+        if clean_email and clean_email in self.email_index:
+            existing_id = self.email_index[clean_email]
             
         # Try to find existing contact by phone if not found by email
-        if not existing_id and contact.phone and contact.phone in self.phone_index:
-            existing_id = self.phone_index[contact.phone]
+        clean_phone = ''.join(filter(str.isdigit, contact.phone)) if contact.phone else ""
+        if not existing_id and clean_phone and clean_phone in self.phone_index:
+            existing_id = self.phone_index[clean_phone]
             
         if existing_id:
             self.contacts[existing_id].merge_with(contact)
@@ -256,9 +258,13 @@ class ContactStore:
     def _update_indexes(self, contact: Contact):
         """Update lookup indexes for a contact."""
         if contact.email:
-            self.email_index[contact.email] = contact.contact_id
+            clean_email = contact.email.strip().lower()
+            if clean_email:
+                self.email_index[clean_email] = contact.contact_id
         if contact.phone:
-            self.phone_index[contact.phone] = contact.contact_id
+            clean_phone = ''.join(filter(str.isdigit, contact.phone))
+            if clean_phone:
+                self.phone_index[clean_phone] = contact.contact_id
     
     def get_contact(self, contact_id: str) -> Optional[Contact]:
         """Get a contact by ID."""
