@@ -162,8 +162,7 @@ class GoogleContactsConnector:
         for field in user_defined:
             key = field.get('key')
             value = field.get('value')
-            if key and value:
-                # Store as is directly in extra_fields
+            if key and value and key in ['escooter1', 'escooter2', 'escooter3']:
                 contact.extra_fields[key] = value
         
         # Extract last modified time from metadata
@@ -356,10 +355,11 @@ class GoogleContactsConnector:
         # User Defined Fields (Custom Fields)
         if contact.extra_fields:
             person['userDefined'] = []
-            for key, value in contact.extra_fields.items():
-                person['userDefined'].append({
-                    'key': key,
-                    'value': value
-                })
+            for key in ['escooter1', 'escooter2', 'escooter3']:
+                if key in contact.extra_fields and contact.extra_fields[key]:
+                    person['userDefined'].append({
+                        'key': key,
+                        'value': contact.extra_fields[key]
+                    })
         
         return person

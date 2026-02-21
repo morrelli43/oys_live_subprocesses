@@ -1,243 +1,98 @@
 """
-Webhook handler for real-time contact sync notifications.
-
-This module provides webhook endpoints to receive instant notifications when
-contacts are created or updated in Square. For Google Contacts, which doesn't
-support webhooks, we use polling with sync tokens.
+Webhook and Webform listener for V2 architecture.
+Combines all POST endpoints into a single memory-first Flask app.
 """
 from flask import Flask, request, jsonify
-import base64
-import hashlib
 import hmac
+import hashlib
 import os
-import time
-from typing import Callable, Optional
-from datetime import datetime
 
-from contact_model import ContactStore
-from sync_engine import SyncEngine
-
-
-class WebhookHandler:
-    """Handles webhook notifications from various sources."""
-    
-    def __init__(self, engine: SyncEngine, store: ContactStore, app=None):
-        self.app = app or Flask(__name__)
-        self.engine = engine
-        self.store = store
+class WebhookServer:
+    def __init__(self, sync_engine, port=7173):
+        self.app = Flask(__name__)
+        self.port = port
+        self.engine = sync_engine
+        
+        # Square config
         self.square_signature_key = os.getenv('SQUARE_SIGNATURE_KEY')
-        self.square_webhook_url = os.getenv('SQUARE_WEBHOOK_URL', '')
-        self._setup_routes()
-    
-    def _setup_routes(self):
-        """Setup Flask routes for webhook endpoints."""
-        
-        @self.app.route('/webhooks/square', methods=['POST'])
-        def square_webhook():
-            """Handle Square customer webhook notifications."""
-            # Verify webhook signature
-            if not self._verify_square_signature(request):
-                return jsonify({'error': 'Invalid signature'}), 401
-            
-            data = request.json
-            event_type = data.get('type')
-            
-            # Handle different customer events
-            if event_type in ['customer.created', 'customer.updated', 'customer.merged']:
-                print(f"Received Square webhook: {event_type}")
-                
-                # Trigger sync for Square connector
-                self._handle_square_event(data)
-                
-                return jsonify({'status': 'success'}), 200
-            
-            return jsonify({'status': 'ignored'}), 200
-        
-        @self.app.route('/webhooks/google', methods=['POST'])
-        def google_webhook():
-            """
-            Placeholder for Google webhook handler.
-            
-            Note: Google Contacts API does not natively support webhooks.
-            Use polling with sync tokens instead via the google_connector.
-            """
-            return jsonify({
-                'status': 'not_supported',
-                'message': 'Google Contacts API does not support webhooks. Use polling.'
-            }), 501
-        
-        @self.app.route('/webhooks/health', methods=['GET'])
-        def health_check():
-            """Health check endpoint for webhook server."""
-            return jsonify({
-                'status': 'healthy',
-                'timestamp': datetime.now().isoformat()
-            }), 200
-    
-    def _verify_square_signature(self, request) -> bool:
-        """
-        Verify Square webhook signature.
-        
-        Square sends a signature in the x-square-hmacsha256-signature header.
-        We must verify this to ensure the webhook is authentic.
-        """
-        if not self.square_signature_key:
-            print("Warning: SQUARE_SIGNATURE_KEY not configured, skipping verification")
-            return True  # In dev mode, allow without verification
-        
-        signature = request.headers.get('x-square-hmacsha256-signature')
-        if not signature:
-            print("No signature header found")
-            return False
-        
-        # Compute expected signature
-        # Use the configured public URL (what Square signs against)
-        # rather than the internal proxy URL from request.url
-        webhook_url = self.square_webhook_url or request.url
-        body = request.get_data()
-        
-        # Square signature = Base64(HMAC-SHA256(signature_key, url + body))
-        payload = webhook_url.encode() + body
-        expected_signature = base64.b64encode(
-            hmac.new(
-                self.square_signature_key.encode(),
-                payload,
-                hashlib.sha256
-            ).digest()
-        ).decode()
-        
-        # Compare signatures (constant-time comparison)
-        return hmac.compare_digest(signature, expected_signature)
-    
-    def _handle_square_event(self, event_data: dict):
-        """
-        Handle Square customer event by syncing to non-Square sources.
-        
-        Important: We do NOT push back to Square here to avoid a feedback loop
-        (pushing to Square triggers more customer.updated webhooks).
-        """
-        def background_sync():
-            try:
-                # Extract event details
-                event_type = event_data.get('type')
-                entity_id = event_data.get('data', {}).get('id')
-                
-                print(f"Processing Square event: {event_type} for entity {entity_id}")
-                
-                # Trigger sync (in production, use a task queue)
-                if 'square' in self.engine.connectors:
-                    # Fetch from Square
-                    square_connector = self.engine.connectors['square']
-                    contacts = square_connector.fetch_contacts()
-                    
-                    # Merge into store
-                    for contact in contacts:
-                        self.store.add_contact(contact)
-                    
-                    # Push to OTHER sources only (not Square) to avoid feedback loop
-                    all_contacts = self.store.get_all_contacts()
-                    for source_name, connector in self.engine.connectors.items():
-                        if source_name == 'square':
-                            continue  # Skip Square — the change came FROM Square
-                        if not hasattr(connector, 'push_contact'):
-                            continue
-                        
-                        print(f"Pushing to {source_name}...")
-                        success_count = 0
-                        fail_count = 0
-                        for contact in all_contacts:
-                            try:
-                                connector.push_contact(contact)
-                                success_count += 1
-                            except Exception as e:
-                                fail_count += 1
-                                print(f"  Error pushing contact to {source_name}: {e}")
-                            # Throttle between contacts to avoid overwhelming the API
-                            time.sleep(0.5)
-                        print(f"  {source_name}: {success_count} succeeded, {fail_count} failed out of {len(all_contacts)} contacts")
-                    
-                    # Save local state after syncing so we persist the new IDs generated by other connectors (e.g., Google Resources)
-                    self.store.save_to_disk(self.engine.contacts_file)
-                    self.engine._save_state()
-                    print(f"Sync triggered by Square webhook completed successfully")
-            
-            except Exception as e:
-                print(f"Error handling Square webhook event: {e}")
+        self.square_webhook_url = os.getenv('SQUARE_WEBHOOK_URL')
 
-        # Execute instantly in background thread to avoid webhook timeouts
-        import threading
-        t = threading.Thread(target=background_sync)
-        t.daemon = True
-        t.start()
-    
-    def run(self, host: str = '127.0.0.1', port: int = 5001):
-        """
-        Run the webhook server.
-        
-        Args:
-            host: Host to bind to (default: localhost for security)
-            port: Port to listen on (default: 5001)
-        """
-        if host == '0.0.0.0':
-            print("WARNING: Binding to 0.0.0.0 exposes webhook server to all network interfaces!")
-            print("Ensure proper security measures are in place (firewall, reverse proxy, etc.)")
-        
-        print(f"Starting webhook server on http://{host}:{port}")
-        print("Webhook endpoints:")
-        print(f"  - POST http://{host}:{port}/webhooks/square  (Square customer events)")
-        print(f"  - GET  http://{host}:{port}/webhooks/health  (health check)")
-        
-        self.app.run(host=host, port=port, debug=False)
+        # Register Routes
+        self.app.route('/health', methods=['GET'])(self.health_check)
+        self.app.route('/submit', methods=['POST', 'OPTIONS'])(self.handle_webform)
+        self.app.route('/webhooks/square', methods=['POST'])(self.handle_square)
 
+    def health_check(self):
+        return jsonify({"status": "ok", "version": "v2.0"}), 200
 
-class GoogleContactsPoller:
-    """
-    Polling-based change detection for Google Contacts.
-    
-    Since Google Contacts API doesn't support webhooks, we use sync tokens
-    to efficiently poll for changes without downloading all contacts.
-    """
-    
-    def __init__(self, google_connector, sync_callback: Optional[Callable] = None):
-        """
-        Initialize poller.
-        
-        Args:
-            google_connector: GoogleContactsConnector instance
-            sync_callback: Function to call when changes are detected
-        """
-        self.google_connector = google_connector
-        self.sync_callback = sync_callback
-        self.sync_token = None
-    
-    def poll_for_changes(self) -> bool:
-        """
-        Poll Google Contacts for changes using sync tokens.
-        
-        Returns:
-            True if changes were detected, False otherwise
-        """
+    def handle_webform(self):
+        """Immediately parse and drop webforms into the sync engine memory."""
+        if request.method == 'OPTIONS':
+            return '', 204
+
         try:
-            # Note: This is a placeholder for sync token implementation
-            # The actual implementation would use the People API's syncToken
-            # to fetch only changed contacts
+            # Handle JSON or Form-Data
+            if request.is_json:
+                data = request.json
+            else:
+                data = request.form.to_dict()
+
+            print(f"\n[WebhookServer] Received /submit payload: {data.get('email')} / {data.get('phone')}")
             
-            print("Polling Google Contacts for changes...")
+            # Immediately hand off to engine for memory parsing and instapush
+            success = self.engine.process_incoming_webhook(data, source_name='webform')
             
-            # In a real implementation:
-            # 1. Use connections.list with syncToken parameter
-            # 2. Get updated/deleted contacts since last sync
-            # 3. Trigger callback if changes found
-            
-            # For now, fetch all contacts (simplified)
-            contacts = self.google_connector.fetch_contacts()
-            
-            if contacts and self.sync_callback:
-                self.sync_callback(contacts)
-                return True
-            
-            return False
-        
+            if success:
+                return jsonify({"status": "success", "message": "Contact pushed instantly."}), 200
+            else:
+                return jsonify({"status": "error", "message": "Missing usable phone number"}), 400
+
         except Exception as e:
-            print(f"Error polling Google Contacts: {e}")
-            return False
+            print(f"[WebhookServer] Error processing /submit: {e}")
+            return jsonify({"status": "error", "message": str(e)}), 500
+
+    def handle_square(self):
+        """Process real-time Square customer events."""
+        print("\n[WebhookServer] Received Square Event")
+        signature = request.headers.get('x-square-hmacsha256-signature')
+        
+        if self.square_signature_key and self.square_webhook_url:
+            if not signature or not self._verify_square_signature(request.get_data(), signature):
+                print("  Invalid Square signature")
+                return jsonify({'error': 'Unauthorized'}), 401
+                
+        # For Square webhooks, we actually just trigger a global sync
+        # Since Square is the source of truth, pulling the fresh data from Square
+        # and forcefully distributing it outward is safest.
+        payload = request.json
+        if not payload:
+            return jsonify({'error': 'Invalid payload'}), 400
+            
+        event_type = payload.get('type')
+        if event_type in ['customer.created', 'customer.updated']:
+            print(f"  Square Event: {event_type} - Syncing all...")
+            # Fire sync in background thread to not block webhook response
+            import threading
+            threading.Thread(target=self.engine.sync_all).start()
+            
+        return jsonify({'status': 'received'}), 200
+
+    def _verify_square_signature(self, body, signature):
+        body_str = body.decode('utf-8')
+        sig_string = self.square_webhook_url + body_str
+        
+        hmac_obj = hmac.new(
+            self.square_signature_key.encode('utf-8'),
+            sig_string.encode('utf-8'),
+            hashlib.sha256
+        )
+        
+        computed_signature = hmac_obj.digest()
+        import base64
+        computed_b64 = base64.b64encode(computed_signature).decode('utf-8')
+        
+        return hmac.compare_digest(computed_b64, signature)
+
+    def run(self, host='0.0.0.0'):
+        print(f"\n[WebhookServer] Starting V2 combined listener on {host}:{self.port}")
+        self.app.run(host=host, port=self.port, debug=False)

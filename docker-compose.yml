@@ -4,7 +4,6 @@ services:
     image: ghcr.io/morrelli43/contact_sync:main
     container_name: "contact-sync"
     restart: unless-stopped
-    command: ["serve", "--host", "0.0.0.0"]
     environment:
       - ENABLE_GOOGLE=true
       - ENABLE_SQUARE=true

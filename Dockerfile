@@ -1,7 +1,12 @@
+# syntax=docker/dockerfile:1
 FROM python:3.11-slim
 
 ENV PYTHONDONTWRITEBYTECODE=1 \
-    PYTHONUNBUFFERED=1
+    PYTHONUNBUFFERED=1 \
+    ENABLE_GOOGLE=true \
+    ENABLE_SQUARE=true \
+    SYNC_INTERVAL=1800 \
+    PORT=7173
 
 WORKDIR /app
 
@@ -10,11 +15,8 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 COPY . .
 
-LABEL org.opencontainers.image.source=https://github.com/morrelli43/contact_sync
-LABEL org.opencontainers.image.description="Contact Sync Service"
-LABEL org.opencontainers.image.licenses=MIT
-
-# Expose the Flask port
+# Expose the Flask/Webhook listener port
 EXPOSE 7173
 
-ENTRYPOINT ["python", "main.py"]
+# Single unified start command
+ENTRYPOINT ["python", "main.py", "serve"]
