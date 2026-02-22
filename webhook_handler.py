@@ -74,6 +74,16 @@ class WebhookServer:
             # Fire sync in background thread to not block webhook response
             import threading
             threading.Thread(target=self.engine.sync_all).start()
+        elif event_type == 'customer.deleted':
+            # Extract the deleted customer ID and propagate deletion
+            customer_id = (payload.get('data', {}).get('object', {}).get('customer', {}).get('id') or
+                           payload.get('data', {}).get('id'))
+            if customer_id:
+                print(f"  Square Event: customer.deleted - Customer ID: {customer_id}")
+                import threading
+                threading.Thread(target=self.engine.handle_square_deletion, args=(customer_id,)).start()
+            else:
+                print("  Square Event: customer.deleted - Could not extract customer ID")
             
         return jsonify({'status': 'received'}), 200
 

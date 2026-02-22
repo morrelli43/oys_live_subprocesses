@@ -105,6 +105,7 @@ class SyncEngine:
             self.store.clear()
             
             # 1. Fetch Square (Source of Truth)
+            square_phones = set()  # Track phones fetched from Square for orphan detection
             if 'square' in self.connectors:
                 print("Fetching contacts from Square (Source of Truth)...")
                 try:
@@ -114,11 +115,14 @@ class SyncEngine:
                         c._original_square_payload = self.connectors['square']._contact_to_customer(c)
                         c._original_square_attrs = {k: v for k, v in c.extra_fields.items() if k in ['escooter1', 'escooter2', 'escooter3']}
                         self.store.add_contact(c, source_of_truth='square')
+                        if c.normalized_phone:
+                            square_phones.add(c.normalized_phone)
                     print(f"  Loaded {len(square_contacts)} Square contacts.")
                 except Exception as e:
                     print(f"  Error fetching from Square: {e}")
                     
             # 2. Fetch Google Contacts 
+            google_contacts = []
             if 'google' in self.connectors:
                 print("Fetching contacts from Google...")
                 try:
@@ -135,6 +139,10 @@ class SyncEngine:
                 except Exception as e:
                     print(f"  Error fetching from Google: {e}")
             
+            # 2.5. Orphan Detection: delete Google contacts no longer in Square
+            if 'google' in self.connectors and 'square' in self.connectors:
+                self._delete_google_orphans(google_contacts, square_phones)
+            
             # 3. Push Unified Data Back to ALL Sources
             unified_contacts = self.store.get_all_contacts()
             success = self.push_to_all_sources(unified_contacts)
@@ -147,6 +155,76 @@ class SyncEngine:
         finally:
             self.lock.release()
     
+    def _delete_google_orphans(self, google_contacts: List[Contact], square_phones: set):
+        """Delete Google contacts that no longer exist in Square.
+        
+        Only deletes contacts that have a Square source ID, proving they
+        were previously synced from Square. Google-only contacts are safe.
+        
+        Args:
+            google_contacts: Contacts fetched from Google this cycle.
+            square_phones: Set of normalized phone numbers fetched from Square.
+        """
+        
+        deleted_count = 0
+        for gc in google_contacts:
+            google_resource = gc.source_ids.get('google')
+            had_square_id = 'square' in gc.source_ids
+            phone = gc.normalized_phone
+            
+            # Safety: only delete if the contact was previously synced from Square
+            if not had_square_id:
+                continue
+            
+            # If this contact's phone is NOT in any current Square contact, it's an orphan
+            if phone and phone not in square_phones:
+                print(f"  Orphan detected: {gc.first_name} {gc.last_name} ({phone}) - deleting from Google")
+                try:
+                    if self.connectors['google'].delete_contact(google_resource):
+                        deleted_count += 1
+                        # Also remove from in-memory store
+                        to_remove = [cid for cid, c in self.store.contacts.items() 
+                                     if c.normalized_phone == phone]
+                        for cid in to_remove:
+                            del self.store.contacts[cid]
+                except Exception as e:
+                    print(f"  Error deleting orphan from Google: {e}")
+        
+        if deleted_count:
+            print(f"  Deleted {deleted_count} orphaned Google contact(s).")
+
+    def handle_square_deletion(self, square_customer_id: str):
+        """Handle a customer.deleted webhook from Square.
+        
+        Finds the matching Google contact and deletes it.
+        """
+        if 'google' not in self.connectors:
+            print("  No Google connector registered, skipping deletion propagation.")
+            return
+        
+        with self.lock:
+            print(f"\nHandling Square deletion for customer ID: {square_customer_id}")
+            
+            try:
+                google_contacts = self.connectors['google'].fetch_contacts()
+            except Exception as e:
+                print(f"  Error fetching Google contacts for deletion: {e}")
+                return
+            
+            # Find the Google contact that was synced from this Square customer
+            for gc in google_contacts:
+                if gc.source_ids.get('square') == square_customer_id:
+                    google_resource = gc.source_ids.get('google')
+                    if google_resource:
+                        print(f"  Found matching Google contact: {gc.first_name} {gc.last_name}")
+                        try:
+                            self.connectors['google'].delete_contact(google_resource)
+                        except Exception as e:
+                            print(f"  Error deleting from Google: {e}")
+                    return
+            
+            print(f"  No matching Google contact found for Square customer {square_customer_id}")
+
     def push_to_all_sources(self, contacts: List[Contact]) -> bool:
         print("\nPushing normalized contacts back to all destinations...")
         success = True
