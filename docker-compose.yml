@@ -39,3 +39,8 @@ services:
       - "${EMAIL_SERVICE_PORT:-3002}:${EMAIL_SERVICE_PORT:-3002}"
     depends_on:
       - contact-sync
+
+networks:
+  default:
+    name: ${FRONTEND_LIVE:-oys_frontend_live}
+    driver: bridge

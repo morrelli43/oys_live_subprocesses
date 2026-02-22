@@ -132,6 +132,7 @@ jobs:
           ENABLE_GOOGLE_VAL: ${{ vars.ENABLE_GOOGLE }}
           ENABLE_SQUARE_VAL: ${{ vars.ENABLE_SQUARE }}
           WEBFORM_STORAGE_VAL: ${{ vars.WEBFORM_STORAGE }}
+          FRONTEND_LIVE_VAL: ${{ vars.FRONTEND_LIVE }}
           SMTP_HOST_VAL: ${{ vars.SMTP_HOST }}
           SMTP_PORT_VAL: ${{ vars.SMTP_PORT }}
           SMTP_SECURE_VAL: ${{ vars.SMTP_SECURE }}
@@ -150,15 +151,15 @@ jobs:
         run: |
           # Define environment-specific variables
           if [ "${{ github.ref_name }}" == "live" ] || [ "${{ github.ref_name }}" == "main" ]; then
-            CONTAINER_NAME="contact-sync-live"
+            CONTAINER_NAME="oys_processes_live"
             # If the user has a target folder secret per environment, fallback to a sensible default
-            DEPLOY_DIR=${TARGET_DIR:-${DOCKER_FOLDER_WEBFILES:-"deployments/contact-sync-live"}}
+            DEPLOY_DIR=${TARGET_DIR:-${DOCKER_FOLDER_WEBFILES:-"deployments/oys_processes_live"}}
           elif [ "${{ github.ref_name }}" == "staging" ]; then
-            CONTAINER_NAME="contact-sync-staging"
-            DEPLOY_DIR=${TARGET_DIR:-${DOCKER_FOLDER_WEBFILES:-"deployments/contact-sync-staging"}}
+            CONTAINER_NAME="oys_processes_staging"
+            DEPLOY_DIR=${TARGET_DIR:-${DOCKER_FOLDER_WEBFILES:-"deployments/oys_processes_staging"}}
           else
-            CONTAINER_NAME="contact-sync-development"
-            DEPLOY_DIR=${TARGET_DIR:-${DOCKER_FOLDER_WEBFILES:-"deployments/contact-sync-development"}}
+            CONTAINER_NAME="oys_processes_development"
+            DEPLOY_DIR=${TARGET_DIR:-${DOCKER_FOLDER_WEBFILES:-"deployments/oys_processes_development"}}
           fi
 
           # Use custom port if set, otherwise 22
@@ -184,6 +185,7 @@ jobs:
             # Contact Sync Secrets and Settings
             echo "ENABLE_GOOGLE=$ENABLE_GOOGLE_VAL" >> .env
             echo "ENABLE_SQUARE=$ENABLE_SQUARE_VAL" >> .env
+            echo "FRONTEND_LIVE=$FRONTEND_LIVE_VAL" >> .env
             echo "SQUARE_ACCESS_TOKEN=$SQUARE_ACCESS_TOKEN_VAL" >> .env
             echo "SQUARE_SIGNATURE_KEY=$SQUARE_SIGNATURE_KEY_VAL" >> .env
             echo "SQUARE_WEBHOOK_URL=$SQUARE_WEBHOOK_URL" >> .env
