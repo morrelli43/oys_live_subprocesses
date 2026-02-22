@@ -5,14 +5,15 @@ services:
     container_name: "contact-sync"
     restart: unless-stopped
     environment:
-      - ENABLE_GOOGLE=true
-      - ENABLE_SQUARE=true
+      - ENABLE_GOOGLE=${ENABLE_GOOGLE:-true}
+      - ENABLE_SQUARE=${ENABLE_SQUARE:-true}
       - SQUARE_ACCESS_TOKEN=${SQUARE_ACCESS_TOKEN}
       - SQUARE_WEBHOOK_URL=${SQUARE_WEBHOOK_URL}
       - SQUARE_SIGNATURE_KEY=${SQUARE_SIGNATURE_KEY}
-      - WEBFORM_STORAGE=/app/env_files/webform_contacts.json
-      - GOOGLE_CREDENTIALS_FILE=/app/env_files/credentials.json
-      - GOOGLE_TOKEN_FILE=/app/env_files/token.json
+      - WEBFORM_STORAGE=${WEBFORM_STORAGE:-/app/env_files/webform_contacts.json}
+      - GOOGLE_CREDENTIALS_FILE=${GOOGLE_CREDENTIALS_FILE:-/app/env_files/credentials.json}
+      - GOOGLE_TOKEN_FILE=${GOOGLE_TOKEN_FILE:-/app/env_files/token.json}
+      - GRIST_API_KEY=${GRIST_API_KEY}
     volumes:
       # Mount the user's specific data directory to /app/env_files
       - ~/dockerhub/permadata/oys_contacts/env_files:/app/env_files

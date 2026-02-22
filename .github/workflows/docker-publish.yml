@@ -93,6 +93,8 @@ jobs:
       - name: Prepare connection
         env:
           SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
+          SSH_PUBLIC_KEY: ${{ secrets.SSH_PUBLIC_KEY }}
+          SSH_PASSWORD: ${{ secrets.SSH_PASSWORD }}
           SSH_HOST_URL: ${{ secrets.SSH_HOST_URL }}
           SSH_USERNAME: ${{ secrets.SSH_USERNAME }}
           SSH_PORT: ${{ secrets.SSH_PORT }}
@@ -113,42 +115,50 @@ jobs:
           SSH_HOST_URL: ${{ secrets.SSH_HOST_URL }}
           SSH_USERNAME: ${{ secrets.SSH_USERNAME }}
           SSH_PORT: ${{ secrets.SSH_PORT }}
-          TARGET_DIR: ${{ secrets.DOCKER_FOLDER_WEBFILES }}
+          TARGET_DIR: ${{ vars.TARGET_DIR }}
+          DOCKER_FOLDER_WEBFILES: ${{ vars.DOCKER_FOLDER_WEBFILES }}
           GH_REPO: ${{ github.repository }}
           # Determine variables based on branch
           IMAGE_TAG: ${{ github.ref_name }}
           GIT_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-          # Service ports
-          EMAIL_SERVICE_PORT: ${{ secrets.EMAIL_SERVICE_PORT }}
-          N8N_WEBHOOK_URL: ${{ secrets.N8N_WEBHOOK_URL }}
-          SQUARE_WEBHOOK_URL: ${{ secrets.SQUARE_WEBHOOK_URL }}
-          SYNC_SERVICE_PORT: ${{ secrets.SYNC_SERVICE_PORT }}
+          # Service ports and endpoints (from vars)
+          EMAIL_SERVICE_PORT: ${{ vars.EMAIL_SERIVCE_PORT }}
+          N8N_WEBHOOK_URL: ${{ vars.N8N_WEBHOOK_URL }}
+          SQUARE_WEBHOOK_URL: ${{ vars.SQUARE_WEBHOOK_URL }}
+          SYNC_SERVICE_PORT: ${{ vars.SYNC_SERVICE_PORT }}
+
+          # Environment Configuration Variables
+          ENABLE_GOOGLE_VAL: ${{ vars.ENABLE_GOOGLE }}
+          ENABLE_SQUARE_VAL: ${{ vars.ENABLE_SQUARE }}
+          WEBFORM_STORAGE_VAL: ${{ vars.WEBFORM_STORAGE }}
+          SMTP_HOST_VAL: ${{ vars.SMTP_HOST }}
+          SMTP_PORT_VAL: ${{ vars.SMTP_PORT }}
+          SMTP_SECURE_VAL: ${{ vars.SMTP_SECURE }}
+          SMTP_FROM_VAL: ${{ vars.SMTP_FROM }}
+          EMAIL_RECIPIENT_VAL: ${{ vars.EMAIL_RECIPIENT }}
 
           # Auth Secrets (Injected from GitHub Environments into the SSH block)
           SQUARE_ACCESS_TOKEN_VAL: ${{ secrets.SQUARE_ACCESS_TOKEN }}
           SQUARE_SIGNATURE_KEY_VAL: ${{ secrets.SQUARE_SIGNATURE_KEY }}
-          SMTP_HOST_VAL: ${{ secrets.SMTP_HOST }}
-          SMTP_PORT_VAL: ${{ secrets.SMTP_PORT }}
-          SMTP_SECURE_VAL: ${{ secrets.SMTP_SECURE }}
           SMTP_USER_VAL: ${{ secrets.SMTP_USER }}
           SMTP_PASS_VAL: ${{ secrets.SMTP_PASS }}
-          SMTP_FROM_VAL: ${{ secrets.SMTP_FROM }}
-          EMAIL_RECIPIENT_VAL: ${{ secrets.EMAIL_RECIPIENT }}
-          PUSH_WEBHOOK_URL_VAL: ${{ secrets.PUSH_WEBHOOK_URL }}
+          GOOGLE_CREDENTIALS_FILE_VAL: ${{ secrets.GOOGLE_CREDENTIALS_FILE }}
+          GOOGLE_TOKEN_FILE_VAL: ${{ secrets.GOOGLE_TOKEN_FILE }}
+          GRIST_API_KEY_VAL: ${{ secrets.GRIST_API_KEY }}
 
         run: |
           # Define environment-specific variables
           if [ "${{ github.ref_name }}" == "live" ] || [ "${{ github.ref_name }}" == "main" ]; then
             CONTAINER_NAME="contact-sync-live"
             # If the user has a target folder secret per environment, fallback to a sensible default
-            DEPLOY_DIR=${TARGET_DIR:-"deployments/contact-sync-live"}
+            DEPLOY_DIR=${TARGET_DIR:-${DOCKER_FOLDER_WEBFILES:-"deployments/contact-sync-live"}}
           elif [ "${{ github.ref_name }}" == "staging" ]; then
             CONTAINER_NAME="contact-sync-staging"
-            DEPLOY_DIR=${TARGET_DIR:-"deployments/contact-sync-staging"}
+            DEPLOY_DIR=${TARGET_DIR:-${DOCKER_FOLDER_WEBFILES:-"deployments/contact-sync-staging"}}
           else
             CONTAINER_NAME="contact-sync-development"
-            DEPLOY_DIR=${TARGET_DIR:-"deployments/contact-sync-development"}
+            DEPLOY_DIR=${TARGET_DIR:-${DOCKER_FOLDER_WEBFILES:-"deployments/contact-sync-development"}}
           fi
 
           # Use custom port if set, otherwise 22
@@ -171,13 +181,19 @@ jobs:
             echo "GITHUB_REPOSITORY=$GH_REPO" >> .env
             echo "IMAGE_TAG=$IMAGE_TAG" >> .env
             
-            # Contact Sync Secrets
+            # Contact Sync Secrets and Settings
+            echo "ENABLE_GOOGLE=$ENABLE_GOOGLE_VAL" >> .env
+            echo "ENABLE_SQUARE=$ENABLE_SQUARE_VAL" >> .env
             echo "SQUARE_ACCESS_TOKEN=$SQUARE_ACCESS_TOKEN_VAL" >> .env
             echo "SQUARE_SIGNATURE_KEY=$SQUARE_SIGNATURE_KEY_VAL" >> .env
             echo "SQUARE_WEBHOOK_URL=$SQUARE_WEBHOOK_URL" >> .env
             echo "SYNC_SERVICE_PORT=$SYNC_SERVICE_PORT" >> .env
+            echo "WEBFORM_STORAGE=$WEBFORM_STORAGE_VAL" >> .env
+            echo "GOOGLE_CREDENTIALS_FILE=$GOOGLE_CREDENTIALS_FILE_VAL" >> .env
+            echo "GOOGLE_TOKEN_FILE=$GOOGLE_TOKEN_FILE_VAL" >> .env
+            echo "GRIST_API_KEY=$GRIST_API_KEY_VAL" >> .env
             
-            # Email Service / SMTP Secrets
+            # Email Service / SMTP Secrets and Settings
             echo "SMTP_HOST=$SMTP_HOST_VAL" >> .env
             echo "SMTP_PORT=$SMTP_PORT_VAL" >> .env
             echo "SMTP_SECURE=$SMTP_SECURE_VAL" >> .env
@@ -185,7 +201,6 @@ jobs:
             echo "SMTP_PASS=$SMTP_PASS_VAL" >> .env
             echo "SMTP_FROM=$SMTP_FROM_VAL" >> .env
             echo "EMAIL_RECIPIENT=$EMAIL_RECIPIENT_VAL" >> .env
-            echo "PUSH_WEBHOOK_URL=$PUSH_WEBHOOK_URL_VAL" >> .env
             echo "N8N_WEBHOOK_URL=$N8N_WEBHOOK_URL" >> .env
             echo "EMAIL_SERVICE_PORT=$EMAIL_SERVICE_PORT" >> .env
 
