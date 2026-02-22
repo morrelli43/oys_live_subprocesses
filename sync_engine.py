@@ -110,6 +110,9 @@ class SyncEngine:
                 try:
                     square_contacts = self.connectors['square'].fetch_contacts()
                     for c in square_contacts:
+                        # Snaphot the exact payload Square gave us
+                        c._original_square_payload = self.connectors['square']._contact_to_customer(c)
+                        c._original_square_attrs = {k: v for k, v in c.extra_fields.items() if k in ['escooter1', 'escooter2', 'escooter3']}
                         self.store.add_contact(c, source_of_truth='square')
                     print(f"  Loaded {len(square_contacts)} Square contacts.")
                 except Exception as e:
@@ -121,6 +124,8 @@ class SyncEngine:
                 try:
                     google_contacts = self.connectors['google'].fetch_contacts()
                     for c in google_contacts:
+                        # Snapshot the exact payload Google gave us
+                        c._original_google_payload = self.connectors['google']._contact_to_person(c)
                         # Add them, but specify 'google' which yields to 'square' on conflict
                         self.store.add_contact(c, source_of_truth='google')
                     print(f"  Loaded {len(google_contacts)} Google contacts.")
@@ -156,6 +161,29 @@ class SyncEngine:
                 if not contact.normalized_phone:
                     continue
                     
+                # Intelligent dirty checking to prevent infinite loops and API burning
+                try:
+                    if source_name == 'square':
+                        new_sq_payload = connector._contact_to_customer(contact)
+                        new_sq_attrs = {k: v for k, v in contact.extra_fields.items() if k in ['escooter1', 'escooter2', 'escooter3']}
+                        
+                        orig_sq_payload = getattr(contact, '_original_square_payload', None)
+                        orig_sq_attrs = getattr(contact, '_original_square_attrs', None)
+                        
+                        if orig_sq_payload is not None and orig_sq_payload == new_sq_payload and orig_sq_attrs == new_sq_attrs:
+                            # print(f"  Skipping {contact.first_name}... no changes for Square.")
+                            continue
+                            
+                    elif source_name == 'google':
+                        new_go_payload = connector._contact_to_person(contact)
+                        orig_go_payload = getattr(contact, '_original_google_payload', None)
+                        
+                        if orig_go_payload is not None and orig_go_payload == new_go_payload:
+                            # print(f"  Skipping {contact.first_name}... no changes for Google.")
+                            continue
+                except Exception as e:
+                    print(f"  Warning during diff check: {e}")
+
                 try:
                     if connector.push_contact(contact):
                         pushed += 1
