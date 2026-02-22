@@ -99,7 +99,7 @@ class SyncEngine:
             
         try:
             print("=" * 60)
-            print("Starting v2.2.3 synchronization cycle")
+            print("Starting v2.2.4 synchronization cycle")
             print("=" * 60)
             
             self.store.clear()
@@ -140,7 +140,7 @@ class SyncEngine:
             success = self.push_to_all_sources(unified_contacts)
             
             print("\n" + "=" * 60)
-            print(f"v2.2.3 Synchronization cycle completed. {len(unified_contacts)} unique contacts.")
+            print(f"v2.2.4 Synchronization cycle completed. {len(unified_contacts)} unique contacts.")
             print("=" * 60)
             return success
             

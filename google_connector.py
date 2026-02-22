@@ -314,10 +314,12 @@ class GoogleContactsConnector:
         
         # Name
         if contact.first_name or contact.last_name:
-            person['names'] = [{
-                'givenName': contact.first_name or '',
-                'familyName': contact.last_name or ''
-            }]
+            name_entry = {}
+            if contact.first_name:
+                name_entry['givenName'] = contact.first_name
+            if contact.last_name:
+                name_entry['familyName'] = contact.last_name
+            person['names'] = [name_entry]
         else:
             person['names'] = []
         
@@ -339,11 +341,12 @@ class GoogleContactsConnector:
         
         if company_val or title_val:
             org_entry = {}
-            # Google Contacts Hides the Job Title if the Company Name is completely empty. 
-            # We must trick it by passing a single whitespace if they have a scooter but no company.
             comp = company_val if company_val else ''
+            
+            # Google Contacts Hides the Job Title if the Company Name is omitted. 
+            # We must pass something if they have a scooter but no company.
             if not comp and title_val:
-                comp = ' '
+                comp = 'Scooter Rider' # Fallback name to rendering title
                 
             if comp:
                 org_entry['name'] = comp
@@ -352,28 +355,31 @@ class GoogleContactsConnector:
                 
             person['organizations'] = [org_entry]
         else:
-            # If both are completely empty, passing an empty array deletes the entire Org block
             person['organizations'] = []
         
         # Addresses
         if contact.addresses:
-            # Always pass only the single primary address
             addr = contact.addresses[0]
             street1 = addr.get('street', '')
             street2 = addr.get('street2', '')
             if street2:
-                # Australian convention: "Unit X, 123 Street Name"
                 full_street = f"{street2}, {street1}"
             else:
                 full_street = street1
             
-            person['addresses'] = [{
-                'streetAddress': full_street,
-                'city': addr.get('city', ''),
-                'region': addr.get('state', ''),
-                'postalCode': addr.get('postal_code', ''),
-                'country': addr.get('country', '')
-            }]
+            addr_entry = {}
+            if full_street:
+                addr_entry['streetAddress'] = full_street
+            if addr.get('city'):
+                addr_entry['city'] = addr.get('city')
+            if addr.get('state'):
+                addr_entry['region'] = addr.get('state')
+            if addr.get('postal_code'):
+                addr_entry['postalCode'] = addr.get('postal_code')
+            if addr.get('country'):
+                addr_entry['country'] = addr.get('country')
+                
+            person['addresses'] = [addr_entry] if addr_entry else []
         else:
             person['addresses'] = []
         
