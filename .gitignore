@@ -52,4 +52,7 @@ demo_sync_state.json
 token.json
 credentials.json
 env_files/
-env_files/
+
+# Node (email-service)
+node_modules/
+email-service.zip

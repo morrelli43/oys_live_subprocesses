@@ -18,3 +18,22 @@ services:
       - ~/dockerhub/permadata/oys_contacts/env_files:/app/env_files
     ports:
       - "7173:7173"
+
+  email-service:
+    build: ./email-service
+    container_name: "email-service"
+    restart: unless-stopped
+    environment:
+      - SMTP_HOST=${SMTP_HOST}
+      - SMTP_PORT=${SMTP_PORT:-587}
+      - SMTP_SECURE=${SMTP_SECURE:-false}
+      - SMTP_USER=${SMTP_USER}
+      - SMTP_PASS=${SMTP_PASS}
+      - SMTP_FROM=${SMTP_FROM}
+      - EMAIL_RECIPIENT=${EMAIL_RECIPIENT:-bookings@onyascoot.com}
+      - SYNC_SERVICE_URL=http://contact-sync:7173/submit
+      - PUSH_WEBHOOK_URL=${PUSH_WEBHOOK_URL:-https://hooks.morrelli43media.com/webhook/message-center}
+    ports:
+      - "3002:3002"
+    depends_on:
+      - contact-sync
