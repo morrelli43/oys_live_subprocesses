@@ -37,7 +37,7 @@ class WebhookServer:
             else:
                 data = request.form.to_dict()
 
-            print(f"\n[WebhookServer] Received /submit payload: {data.get('email')} / {data.get('phone')}")
+            print(f"\n[WebhookServer] Received /submit payload: {data.get('email', 'No email')} / {data.get('phone', 'No phone')}")
             
             # Immediately hand off to engine for memory parsing and instapush
             success = self.engine.process_incoming_webhook(data, source_name='webform')
@@ -45,7 +45,7 @@ class WebhookServer:
             if success:
                 return jsonify({"status": "success", "message": "Contact pushed instantly."}), 200
             else:
-                return jsonify({"status": "error", "message": "Missing usable phone number"}), 400
+                return jsonify({"status": "error", "message": "Processing failed or missing required fields"}), 400
 
         except Exception as e:
             print(f"[WebhookServer] Error processing /submit: {e}")
