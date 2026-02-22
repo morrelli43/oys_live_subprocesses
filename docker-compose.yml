@@ -8,7 +8,7 @@ services:
       - ENABLE_GOOGLE=true
       - ENABLE_SQUARE=true
       - SQUARE_ACCESS_TOKEN=${SQUARE_ACCESS_TOKEN}
-      - SQUARE_WEBHOOK_URL=https://sync.onyascoot.com/webhooks/square
+      - SQUARE_WEBHOOK_URL=${SQUARE_WEBHOOK_URL}
       - SQUARE_SIGNATURE_KEY=${SQUARE_SIGNATURE_KEY}
       - WEBFORM_STORAGE=/app/env_files/webform_contacts.json
       - GOOGLE_CREDENTIALS_FILE=/app/env_files/credentials.json
@@ -17,7 +17,7 @@ services:
       # Mount the user's specific data directory to /app/env_files
       - ~/dockerhub/permadata/oys_contacts/env_files:/app/env_files
     ports:
-      - "7173:7173"
+      - "${SYNC_SERVICE_PORT}:${SYNC_SERVICE_PORT}"
 
   email-service:
     build: ./email-service
@@ -33,8 +33,8 @@ services:
       - SMTP_FROM=${SMTP_FROM}
       - EMAIL_RECIPIENT=${EMAIL_RECIPIENT:-bookings@onyascoot.com}
       - SYNC_SERVICE_URL=http://contact-sync:7173/submit
-      - PUSH_WEBHOOK_URL=${PUSH_WEBHOOK_URL:-https://hooks.morrelli43media.com/webhook/message-center}
+      - PUSH_WEBHOOK_URL=${N8N_WEBHOOK_URL:-https://hooks.morrelli43media.com/webhook/message-center}
     ports:
-      - "3002:3002"
+      - "${EMAIL_SERVICE_PORT}:${EMAIL_SERVICE_PORT}"
     depends_on:
       - contact-sync

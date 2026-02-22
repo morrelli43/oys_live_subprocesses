@@ -119,6 +119,12 @@ jobs:
           IMAGE_TAG: ${{ github.ref_name }}
           GIT_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
+          # Service ports
+          EMAIL_SERIVCE_PORT: ${{ secrets.EMAIL_SERIVCE_PORT }}
+          N8N_WEBHOOK_URL: ${{ secrets.N8N_WEBHOOK_URL }}
+          SQUARE_WEBHOOK_URL: ${{ secrets.SQUARE_WEBHOOK_URL }}
+          SYNC_SERVICE_PORT: ${{ secrets.SYNC_SERVICE_PORT }}
+
           # Auth Secrets (Injected from GitHub Environments into the SSH block)
           SQUARE_ACCESS_TOKEN_VAL: ${{ secrets.SQUARE_ACCESS_TOKEN }}
           SQUARE_SIGNATURE_KEY_VAL: ${{ secrets.SQUARE_SIGNATURE_KEY }}
