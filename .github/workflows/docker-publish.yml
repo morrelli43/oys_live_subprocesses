@@ -170,7 +170,7 @@ jobs:
           ssh -p $PORT -o StrictHostKeyChecking=no -i ~/.ssh/deployment_key $SSH_USERNAME@$SSH_HOST_URL "mkdir -p ~/$DEPLOY_DIR"
 
           # 1. SCP the docker-compose.yml
-          scp -P $PORT -o StrictHostKeyChecking=no -i ~/.ssh/deployment_key docker-compose.yml $SSH_USERNAME@$SSH_HOST_URL:~/$DEPLOY_DIR/docker-compose.yml
+          scp -P $PORT -o StrictHostKeyChecking=no -i ~/.ssh/deployment_key docker-compose.yml $SSH_USERNAME@$SSH_HOST_URL:~/$DEPLOY_DIR/docker-compose.subprocesses.yml
 
           # 2. SSH in to configure and start
           ssh -p $PORT -o StrictHostKeyChecking=no -i ~/.ssh/deployment_key $SSH_USERNAME@$SSH_HOST_URL << EOF
@@ -178,56 +178,56 @@ jobs:
             
             # Create .env file with all variables needed by docker-compose
             echo "Generating .env..."
-            echo "NODE_ENV=production" > .env
-            echo "GITHUB_REPOSITORY=$GH_REPO" >> .env
-            echo "IMAGE_TAG=$IMAGE_TAG" >> .env
+            echo "NODE_ENV=production" > .env.subprocesses
+            echo "GITHUB_REPOSITORY=$GH_REPO" >> .env.subprocesses
+            echo "IMAGE_TAG=$IMAGE_TAG" >> .env.subprocesses
             
             # Contact Sync Secrets and Settings
-            echo "ENABLE_GOOGLE=$ENABLE_GOOGLE_VAL" >> .env
-            echo "ENABLE_SQUARE=$ENABLE_SQUARE_VAL" >> .env
-            echo "FRONTEND_LIVE=$FRONTEND_LIVE_VAL" >> .env
-            echo "SQUARE_ACCESS_TOKEN=$SQUARE_ACCESS_TOKEN_VAL" >> .env
-            echo "SQUARE_SIGNATURE_KEY=$SQUARE_SIGNATURE_KEY_VAL" >> .env
-            echo "SQUARE_WEBHOOK_URL=$SQUARE_WEBHOOK_URL" >> .env
-            echo "SYNC_SERVICE_PORT=$SYNC_SERVICE_PORT" >> .env
-            echo "WEBFORM_STORAGE=$WEBFORM_STORAGE_VAL" >> .env
-            echo "GOOGLE_CREDENTIALS_FILE=$GOOGLE_CREDENTIALS_FILE_VAL" >> .env
-            echo "GOOGLE_TOKEN_FILE=$GOOGLE_TOKEN_FILE_VAL" >> .env
-            echo "GRIST_API_KEY=$GRIST_API_KEY_VAL" >> .env
+            echo "ENABLE_GOOGLE=$ENABLE_GOOGLE_VAL" >> .env.subprocesses
+            echo "ENABLE_SQUARE=$ENABLE_SQUARE_VAL" >> .env.subprocesses
+            echo "FRONTEND_LIVE=$FRONTEND_LIVE_VAL" >> .env.subprocesses
+            echo "SQUARE_ACCESS_TOKEN=$SQUARE_ACCESS_TOKEN_VAL" >> .env.subprocesses
+            echo "SQUARE_SIGNATURE_KEY=$SQUARE_SIGNATURE_KEY_VAL" >> .env.subprocesses
+            echo "SQUARE_WEBHOOK_URL=$SQUARE_WEBHOOK_URL" >> .env.subprocesses
+            echo "SYNC_SERVICE_PORT=$SYNC_SERVICE_PORT" >> .env.subprocesses
+            echo "WEBFORM_STORAGE=$WEBFORM_STORAGE_VAL" >> .env.subprocesses
+            echo "GOOGLE_CREDENTIALS_FILE=$GOOGLE_CREDENTIALS_FILE_VAL" >> .env.subprocesses
+            echo "GOOGLE_TOKEN_FILE=$GOOGLE_TOKEN_FILE_VAL" >> .env.subprocesses
+            echo "GRIST_API_KEY=$GRIST_API_KEY_VAL" >> .env.subprocesses
             
             # Email Service / SMTP Secrets and Settings
-            echo "SMTP_HOST=$SMTP_HOST_VAL" >> .env
-            echo "SMTP_PORT=$SMTP_PORT_VAL" >> .env
-            echo "SMTP_SECURE=$SMTP_SECURE_VAL" >> .env
-            echo "SMTP_USER=$SMTP_USER_VAL" >> .env
-            echo "SMTP_PASS=$SMTP_PASS_VAL" >> .env
-            echo "SMTP_FROM=$SMTP_FROM_VAL" >> .env
-            echo "EMAIL_RECIPIENT=$EMAIL_RECIPIENT_VAL" >> .env
-            echo "N8N_WEBHOOK_URL=$N8N_WEBHOOK_URL" >> .env
-            echo "EMAIL_SERVICE_PORT=$EMAIL_SERVICE_PORT" >> .env
+            echo "SMTP_HOST=$SMTP_HOST_VAL" >> .env.subprocesses
+            echo "SMTP_PORT=$SMTP_PORT_VAL" >> .env.subprocesses
+            echo "SMTP_SECURE=$SMTP_SECURE_VAL" >> .env.subprocesses
+            echo "SMTP_USER=$SMTP_USER_VAL" >> .env.subprocesses
+            echo "SMTP_PASS=$SMTP_PASS_VAL" >> .env.subprocesses
+            echo "SMTP_FROM=$SMTP_FROM_VAL" >> .env.subprocesses
+            echo "EMAIL_RECIPIENT=$EMAIL_RECIPIENT_VAL" >> .env.subprocesses
+            echo "N8N_WEBHOOK_URL=$N8N_WEBHOOK_URL" >> .env.subprocesses
+            echo "EMAIL_SERVICE_PORT=$EMAIL_SERVICE_PORT" >> .env.subprocesses
 
             # Pre-create the bridge network so other stacks can share it as 'external'
             echo "Ensuring frontend bridge network exists..."
             docker network create ${FRONTEND_LIVE:-oys_frontend_live} || true
 
-            # Stop and remove existing containers
+            # Stop and remove existing containers using the isolated compose file and project name
             echo "Stopping existing containers..."
-            docker compose down || true
+            docker compose -f docker-compose.subprocesses.yml --env-file .env.subprocesses -p subprocesses_\${IMAGE_TAG} down || true
             
             # Login to GHCR to allow pulling
             echo "$GIT_TOKEN" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
 
             # Pull latest images
             echo "Pulling latest images..."
-            docker compose pull
+            docker compose -f docker-compose.subprocesses.yml --env-file .env.subprocesses -p subprocesses_\${IMAGE_TAG} pull
             
             # Start containers
             echo "Starting environment..."
-            docker compose up -d --remove-orphans
+            docker compose -f docker-compose.subprocesses.yml --env-file .env.subprocesses -p subprocesses_\${IMAGE_TAG} up -d --remove-orphans
             
             # Clean up old images
             docker image prune -f
             
             # Show running containers
-            docker compose ps
+            docker compose -f docker-compose.subprocesses.yml --env-file .env.subprocesses -p subprocesses_\${IMAGE_TAG} ps
           EOF
