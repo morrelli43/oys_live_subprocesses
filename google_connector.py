@@ -341,15 +341,8 @@ class GoogleContactsConnector:
         
         if company_val or title_val:
             org_entry = {}
-            comp = company_val if company_val else ''
-            
-            # Google Contacts Hides the Job Title if the Company Name is omitted. 
-            # We must pass something if they have a scooter but no company.
-            if not comp and title_val:
-                comp = 'Scooter Rider' # Fallback name to rendering title
-                
-            if comp:
-                org_entry['name'] = comp
+            if company_val:
+                org_entry['name'] = company_val
             if title_val:
                 org_entry['title'] = title_val
                 

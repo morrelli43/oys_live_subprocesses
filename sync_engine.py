@@ -81,11 +81,11 @@ class SyncEngine:
                 
             self.store.add_contact(contact, source_of_truth=source_name)
             
-            # Instant Push to Square and Google
-            for target_name, connector in self.connectors.items():
-                if hasattr(connector, 'push_contact'):
-                    print(f"Instantly pushing webhook contact to {target_name}...")
-                    connector.push_contact(contact)
+            # Instant Push to Square only.
+            # The Square webhook will fire back and trigger a full sync to Google.
+            if 'square' in self.connectors and hasattr(self.connectors['square'], 'push_contact'):
+                print(f"Pushing webhook contact to Square...")
+                self.connectors['square'].push_contact(contact)
                     
             return True
         finally:
