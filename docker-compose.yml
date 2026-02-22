@@ -43,4 +43,4 @@ services:
 networks:
   default:
     name: ${FRONTEND_LIVE:-oys_frontend_live}
-    driver: bridge
+    external: true

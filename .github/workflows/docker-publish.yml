@@ -206,6 +206,10 @@ jobs:
             echo "N8N_WEBHOOK_URL=$N8N_WEBHOOK_URL" >> .env
             echo "EMAIL_SERVICE_PORT=$EMAIL_SERVICE_PORT" >> .env
 
+            # Pre-create the bridge network so other stacks can share it as 'external'
+            echo "Ensuring frontend bridge network exists..."
+            docker network create ${FRONTEND_LIVE:-oys_frontend_live} || true
+
             # Stop and remove existing containers
             echo "Stopping existing containers..."
             docker compose down || true
