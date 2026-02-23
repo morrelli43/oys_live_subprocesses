@@ -165,8 +165,11 @@ class GoogleContactsConnector:
         for field in user_defined:
             key = field.get('key')
             value = field.get('value')
-            if key and value and key in ['escooter1', 'escooter2', 'escooter3']:
-                contact.extra_fields[key] = value
+            if key and value:
+                if key in ['escooter1', 'escooter2', 'escooter3']:
+                    contact.extra_fields[key] = value
+                elif key == 'square_id':
+                    contact.source_ids['square'] = value
         
         # Extract last modified time from metadata
         metadata = person.get('metadata', {})
@@ -393,5 +396,13 @@ class GoogleContactsConnector:
                     'key': key,
                     'value': val
                 })
+                
+        # Also store the Square Customer ID in Google Contacts custom fields natively
+        square_id = contact.source_ids.get('square', '')
+        if square_id:
+            person['userDefined'].append({
+                'key': 'square_id',
+                'value': square_id
+            })
         
         return person
