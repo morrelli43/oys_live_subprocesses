@@ -34,11 +34,23 @@ services:
       - SMTP_FROM=${SMTP_FROM}
       - EMAIL_RECIPIENT=${EMAIL_RECIPIENT:-bookings@onyascoot.com}
       - SYNC_SERVICE_URL=http://contact-sync:7173/submit
-      - PUSH_WEBHOOK_URL=${N8N_WEBHOOK_URL:-https://hooks.morrelli43media.com/webhook/message-center}
+      - MESSAGE_CENTER_URL=http://message-center:3003/push
     ports:
       - "${EMAIL_SERVICE_PORT:-3002}:${EMAIL_SERVICE_PORT:-3002}"
     depends_on:
       - contact-sync
+      - message-center
+
+  message-center:
+    build: ./message-center
+    image: ghcr.io/morrelli43/oys_live_subprocesses_message_center:${IMAGE_TAG:-main}
+    container_name: "message-center"
+    restart: unless-stopped
+    environment:
+      - PUSH_WEBHOOK_URL=${N8N_WEBHOOK_URL:-https://hooks.morrelli43media.com/webhook/message-center}
+      - PORT=3003
+    ports:
+      - "${MESSAGE_CENTER_PORT:-3003}:3003"
 
 networks:
   default:

@@ -97,28 +97,18 @@ On Ya Scoot Booking System
             .then(() => console.log('✅ Synced to contact-service'))
             .catch(err => console.error('⚠️ Sync failed:', err.message));
 
-        // --- NEW: Forward to Pushbullet (Message Center) ---
-        const pushbulletPayload = {
+        // --- Forward to Message Center (Internal) ---
+        const messageCenterUrl = process.env.MESSAGE_CENTER_URL || 'http://message-center:3003/push';
+        const alertPayload = {
             app: "pushbullet",
             target: "dandroid",
             title: `Submit ${first_name}, ${issue}`,
             body: `Name: ${first_name} ${surname}\nPhone: ${number}\nIssue: ${issue}\n`
         };
 
-        fetch(process.env.PUSH_WEBHOOK_URL || 'https://hooks.morrelli43media.com/webhook/message-center', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify(pushbulletPayload)
-        })
-            .then(response => {
-                if (response.ok) {
-                    console.log("✅ Alert sent to Message Center successfully.");
-                } else {
-                    console.error("⚠️ Message Center returned:", response.status);
-                }
-            })
+        console.log(`Forwarding alert to message center: ${messageCenterUrl}`);
+        axios.post(messageCenterUrl, alertPayload)
+            .then(() => console.log("✅ Alert sent to Message Center successfully."))
             .catch(error => console.error("❌ Error sending Message Center alert:", error.message));
         // ----------------------------------------------
 
