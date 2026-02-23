@@ -206,19 +206,25 @@ class SyncEngine:
             print(f"\nHandling Square deletion for customer ID: {square_customer_id}")
             
             try:
-                google_contacts = self.connectors['google'].fetch_contacts()
+                # We MUST check the memory store, not fresh Google contacts,
+                # because the Square ID is only linked during the merge process
+                # and doesn't get pushed into Google's custom fields.
+                merged_contacts = self.store.get_all_contacts()
             except Exception as e:
-                print(f"  Error fetching Google contacts for deletion: {e}")
+                print(f"  Error retrieving memory contacts for deletion: {e}")
                 return
             
-            # Find the Google contact that was synced from this Square customer
-            for gc in google_contacts:
-                if gc.source_ids.get('square') == square_customer_id:
-                    google_resource = gc.source_ids.get('google')
+            # Find the merged contact that was synced from this Square customer
+            for pc in merged_contacts:
+                if pc.source_ids.get('square') == square_customer_id:
+                    google_resource = pc.source_ids.get('google')
                     if google_resource:
-                        print(f"  Found matching Google contact: {gc.first_name} {gc.last_name}")
+                        print(f"  Found matching Google contact: {pc.first_name} {pc.last_name}")
                         try:
                             self.connectors['google'].delete_contact(google_resource)
+                            # Also remove it from memory so it isn't pushed back in next sync
+                            if pc.contact_id in self.store.contacts:
+                                del self.store.contacts[pc.contact_id]
                         except Exception as e:
                             print(f"  Error deleting from Google: {e}")
                     return
