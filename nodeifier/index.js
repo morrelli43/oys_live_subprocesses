@@ -15,7 +15,7 @@ app.get('/health', (req, res) => {
 /**
  * Endpoint to receive alerts and forward to external webhooks
  */
-app.post('/push', async (req, res) => {
+app.post('/send-it', async (req, res) => {
     const payload = req.body;
 
     console.log(`\n[Nodeifier] Received push request: ${payload.title || 'No Title'}`);

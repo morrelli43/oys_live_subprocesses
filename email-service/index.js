@@ -12,7 +12,7 @@ app.get('/health', (req, res) => {
     res.status(200).send('Email Service is running');
 });
 
-app.post('/send-email', async (req, res) => {
+app.post('/send-it', async (req, res) => {
     const { first_name, surname, number, location, address_line_1, suburb, state, postcode, country, escooter_make, escooter_model, issue, issue_extra, website_url } = req.body;
 
     // Spam Protection: Honeypot Check

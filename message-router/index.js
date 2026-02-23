@@ -47,14 +47,14 @@ app.post('/submit', async (req, res) => {
     const alertPayload = {
         app: "pushbullet",
         target: "dandroid",
-        title: `Submit ${first_name}, ${issue || 'New Lead'}`,
-        body: `Name: ${first_name} ${surname}\nPhone: ${number}\nIssue: ${issue || 'No Issue'}\n`
+        title: "NEW: " + `${escooter_make || ''} ${escooter_model || ''}`.trim() + ", " + ` ${issue || ''}`,
+        body: `Name: ${first_name} ${surname}\nPhone: ${number}\n`
     };
 
     // Define service URLs
-    const contactSyncUrl = process.env.CONTACT_SYNC_URL || 'http://contact-sync:4310/submit';
-    const emailServiceUrl = process.env.EMAIL_SERVICE_URL || 'http://email-service:4311/send-email';
-    const nodeifierUrl = process.env.NODEIFIER_URL || 'http://nodeifier:4312/push';
+    const contactSyncUrl = process.env.CONTACT_SYNC_URL || 'http://contact-sync:4310/send-it';
+    const emailServiceUrl = process.env.EMAIL_SERVICE_URL || 'http://email-service:4311/send-it';
+    const nodeifierUrl = process.env.NODEIFIER_URL || 'http://nodeifier:4312/send-it';
 
     // Fan out requests in background
     console.log(`[Message Router] Routing to sub-processes...`);
@@ -86,7 +86,7 @@ app.post('/submit', async (req, res) => {
 const PORT = process.env.PORT || 4300;
 app.listen(PORT, () => {
     console.log(`Message Router listening on port ${PORT}`);
-    console.log(`Contact-Sync: ${process.env.CONTACT_SYNC_URL || 'http://contact-sync:4310/submit'}`);
-    console.log(`Email-Service: ${process.env.EMAIL_SERVICE_URL || 'http://email-service:4311/send-email'}`);
-    console.log(`Nodeifier: ${process.env.NODEIFIER_URL || 'http://nodeifier:4312/push'}`);
+    console.log(`Contact-Sync: ${process.env.CONTACT_SYNC_URL || 'http://contact-sync:4310/send-it'}`);
+    console.log(`Email-Service: ${process.env.EMAIL_SERVICE_URL || 'http://email-service:4311/send-it'}`);
+    console.log(`Nodeifier: ${process.env.NODEIFIER_URL || 'http://nodeifier:4312/send-it'}`);
 });

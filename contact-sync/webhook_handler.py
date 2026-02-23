@@ -20,7 +20,7 @@ class WebhookServer:
         # Register Routes
         self.app.route('/health', methods=['GET'])(self.health_check)
         self.app.route('/sync', methods=['GET', 'POST'])(self.trigger_sync)
-        self.app.route('/submit', methods=['POST', 'OPTIONS'])(self.handle_webform)
+        self.app.route('/send-it', methods=['POST', 'OPTIONS'])(self.handle_webform)
         self.app.route('/webhooks/square', methods=['POST'])(self.handle_square)
 
     def health_check(self):
@@ -44,7 +44,7 @@ class WebhookServer:
             else:
                 data = request.form.to_dict()
 
-            print(f"\n[WebhookServer] Received /submit payload: {data.get('email', 'No email')} / {data.get('phone', 'No phone')}")
+            print(f"\n[WebhookServer] Received /send-it payload: {data.get('email', 'No email')} / {data.get('phone', 'No phone')}")
             
             # Immediately hand off to engine for memory parsing and instapush
             success = self.engine.process_incoming_webhook(data, source_name='webform')
@@ -55,7 +55,7 @@ class WebhookServer:
                 return jsonify({"status": "error", "message": "Processing failed or missing required fields"}), 400
 
         except Exception as e:
-            print(f"[WebhookServer] Error processing /submit: {e}")
+            print(f"[WebhookServer] Error processing /send-it: {e}")
             return jsonify({"status": "error", "message": str(e)}), 500
 
     def handle_square(self):
