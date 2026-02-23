@@ -24,6 +24,7 @@ class SyncEngine:
         import random
         if not getattr(contact, 'custom_id', None):
             contact.custom_id = f"cst-{random.randint(100000000, 999999999)}"
+            print(f"  Generated new Custom ID for contact: {contact.custom_id} ({contact.first_name} {contact.last_name})")
     
     def process_incoming_webhook(self, data: dict, source_name: str = 'webform'):
         """
@@ -123,10 +124,15 @@ class SyncEngine:
                         # Snaphot the exact payload Square gave us
                         c._original_square_payload = self.connectors['square']._contact_to_customer(c)
                         c._original_square_attrs = {k: v for k, v in c.extra_fields.items() if k in ['escooter1', 'escooter2', 'escooter3']}
-                        self.store.add_contact(c, source_of_truth='square')
+                        added_id = self.store.add_contact(c, source_of_truth='square')
+                        if added_id:
+                             # Preserve original payloads on the canonical contact in our temporary store
+                             self.store.contacts[added_id]._original_square_payload = c._original_square_payload
+                             self.store.contacts[added_id]._original_square_attrs = c._original_square_attrs
+
                         if c.normalized_phone:
                             square_phones.add(c.normalized_phone)
-                    print(f"  Loaded {len(square_contacts)} Square contacts.")
+                    print(f"  Loaded {len(square_contacts)} Square contacts into memory.")
                 except Exception as e:
                     print(f"  Error fetching from Square: {e}")
                     
@@ -274,6 +280,18 @@ class SyncEngine:
                         if orig_sq_payload is not None and orig_sq_payload == new_sq_payload and orig_sq_attrs == new_sq_attrs:
                             # print(f"  Skipping {contact.first_name}... no changes for Square.")
                             continue
+                        
+                        if orig_sq_payload is None:
+                            print(f"  Contact {contact.first_name} has no original Square payload, pushing...")
+                        elif orig_sq_payload != new_sq_payload:
+                            print(f"  Contact {contact.first_name} Square payload changed, pushing...")
+                            # Debug: print what changed
+                            orig_ref = orig_sq_payload.get('reference_id')
+                            new_ref = new_sq_payload.get('reference_id')
+                            if orig_ref != new_ref:
+                                print(f"    Reference ID changed: {orig_ref} -> {new_ref}")
+                            else:
+                                print(f"    Payload changed but Reference ID same.")
                             
                     elif source_name == 'google':
                         new_go_payload = connector._contact_to_person(contact)

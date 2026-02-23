@@ -19,7 +19,7 @@ class WebhookServer:
 
         # Register Routes
         self.app.route('/health', methods=['GET'])(self.health_check)
-        self.app.route('/sync', methods=['GET'])(self.trigger_sync)
+        self.app.route('/sync', methods=['GET', 'POST'])(self.trigger_sync)
         self.app.route('/submit', methods=['POST', 'OPTIONS'])(self.handle_webform)
         self.app.route('/webhooks/square', methods=['POST'])(self.handle_square)
 
