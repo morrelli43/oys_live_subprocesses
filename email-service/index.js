@@ -75,7 +75,7 @@ On Ya Scoot Booking System
     }
 });
 
-const PORT = process.env.PORT || 3002;
+const PORT = process.env.PORT || 4311;
 app.listen(PORT, () => {
     console.log(`Email service listening on port ${PORT}`);
 });

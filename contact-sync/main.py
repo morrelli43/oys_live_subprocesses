@@ -82,7 +82,7 @@ def serve():
     t.start()
     
     # Start the Flask webhook listeners blocking the main thread
-    port = int(os.getenv('PORT', '7173'))
+    port = int(os.getenv('PORT', '4310'))
     server = WebhookServer(engine, port=port)
     server.run(host='0.0.0.0')
 

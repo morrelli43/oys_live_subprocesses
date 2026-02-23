@@ -52,9 +52,9 @@ app.post('/submit', async (req, res) => {
     };
 
     // Define service URLs
-    const contactSyncUrl = process.env.CONTACT_SYNC_URL || 'http://contact-sync:7173/submit';
-    const emailServiceUrl = process.env.EMAIL_SERVICE_URL || 'http://email-service:3002/send-email';
-    const nodeifierUrl = process.env.NODEIFIER_URL || 'http://nodeifier:3003/push';
+    const contactSyncUrl = process.env.CONTACT_SYNC_URL || 'http://contact-sync:4310/submit';
+    const emailServiceUrl = process.env.EMAIL_SERVICE_URL || 'http://email-service:4311/send-email';
+    const nodeifierUrl = process.env.NODEIFIER_URL || 'http://nodeifier:4312/push';
 
     // Fan out requests in background
     console.log(`[Message Router] Routing to sub-processes...`);
@@ -83,10 +83,10 @@ app.post('/submit', async (req, res) => {
     });
 });
 
-const PORT = process.env.PORT || 3001;
+const PORT = process.env.PORT || 4300;
 app.listen(PORT, () => {
     console.log(`Message Router listening on port ${PORT}`);
-    console.log(`Contact-Sync: ${process.env.CONTACT_SYNC_URL || 'http://contact-sync:7173/submit'}`);
-    console.log(`Email-Service: ${process.env.EMAIL_SERVICE_URL || 'http://email-service:3002/send-email'}`);
-    console.log(`Nodeifier: ${process.env.NODEIFIER_URL || 'http://nodeifier:3003/push'}`);
+    console.log(`Contact-Sync: ${process.env.CONTACT_SYNC_URL || 'http://contact-sync:4310/submit'}`);
+    console.log(`Email-Service: ${process.env.EMAIL_SERVICE_URL || 'http://email-service:4311/send-email'}`);
+    console.log(`Nodeifier: ${process.env.NODEIFIER_URL || 'http://nodeifier:4312/push'}`);
 });

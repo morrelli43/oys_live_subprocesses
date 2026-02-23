@@ -16,7 +16,7 @@ RUN pip install --no-cache-dir -r requirements.txt
 COPY . .
 
 # Expose the Flask/Webhook listener port
-EXPOSE 7173
+EXPOSE 4310
 
 # Single unified start command
 ENTRYPOINT ["python", "main.py", "serve"]

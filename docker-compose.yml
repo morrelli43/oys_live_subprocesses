@@ -18,7 +18,7 @@ services:
       # Mount the user's specific data directory to /app/env_files
       - ~/dockerhub/permadata/oys_contacts/env_files:/app/env_files
     ports:
-      - "${SYNC_SERVICE_PORT:-7173}:${SYNC_SERVICE_PORT:-7173}"
+      - "${CONTACT_SYNC_PORT:-4310}:4310"
 
   email-service:
     build: ./email-service
@@ -34,7 +34,7 @@ services:
       - SMTP_FROM=${SMTP_FROM}
       - EMAIL_RECIPIENT=${EMAIL_RECIPIENT:-bookings@onyascoot.com}
     ports:
-      - "${EMAIL_SERVICE_PORT:-3002}:${EMAIL_SERVICE_PORT:-3002}"
+      - "${EMAIL_SERIVCE_PORT:-4311}:4311"
     depends_on:
       - contact-sync
 
@@ -45,9 +45,9 @@ services:
     restart: unless-stopped
     environment:
       - PUSH_WEBHOOK_URL=${N8N_WEBHOOK_URL:-https://hooks.morrelli43media.com/webhook/message-center}
-      - PORT=3003
+      - PORT=4312
     ports:
-      - "${NODEIFIER_PORT:-3003}:3003"
+      - "${NODEIFIER_SERVICE_PORT:-4312}:4312"
 
   message-router:
     build: ./message-router
@@ -55,12 +55,12 @@ services:
     container_name: "message-router"
     restart: unless-stopped
     environment:
-      - PORT=3001
-      - CONTACT_SYNC_URL=http://contact-sync:7173/submit
-      - EMAIL_SERVICE_URL=http://email-service:3002/send-email
-      - NODEIFIER_URL=http://nodeifier:3003/push
+      - PORT=4300
+      - CONTACT_SYNC_URL=http://contact-sync:4310/submit
+      - EMAIL_SERVICE_URL=http://email-service:4311/send-email
+      - NODEIFIER_URL=http://nodeifier:4312/push
     ports:
-      - "${MESSAGE_ROUTER_PORT:-3001}:3001"
+      - "${MESSAGE_ROUTER_PORT:-4300}:4300"
     depends_on:
       - contact-sync
       - email-service

@@ -165,10 +165,10 @@ jobs:
           GIT_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
           # Service ports and endpoints (from vars)
-          EMAIL_SERVICE_PORT: ${{ vars.EMAIL_SERIVCE_PORT }}
+          EMAIL_SERIVCE_PORT: ${{ vars.EMAIL_SERIVCE_PORT }}
           N8N_WEBHOOK_URL: ${{ vars.N8N_WEBHOOK_URL }}
           SQUARE_WEBHOOK_URL: ${{ vars.SQUARE_WEBHOOK_URL }}
-          SYNC_SERVICE_PORT: ${{ vars.SYNC_SERVICE_PORT }}
+          CONTACT_SYNC_PORT: ${{ vars.CONTACT_SYNC_PORT }}
 
           # Environment Configuration Variables
           ENABLE_GOOGLE_VAL: ${{ vars.ENABLE_GOOGLE }}
@@ -190,7 +190,7 @@ jobs:
           GOOGLE_TOKEN_FILE_VAL: ${{ secrets.GOOGLE_TOKEN_FILE }}
           GRIST_API_KEY_VAL: ${{ secrets.GRIST_API_KEY }}
           MESSAGE_ROUTER_PORT: ${{ vars.MESSAGE_ROUTER_PORT }}
-          NODEIFIER_PORT: ${{ vars.NODEIFIER_PORT }}
+          NODEIFIER_SERVICE_PORT: ${{ vars.NODEIFIER_SERVICE_PORT }}
 
         run: |
           # Define environment-specific variables
@@ -233,7 +233,7 @@ jobs:
             echo "SQUARE_ACCESS_TOKEN=$SQUARE_ACCESS_TOKEN_VAL" >> .env.subprocesses
             echo "SQUARE_SIGNATURE_KEY=$SQUARE_SIGNATURE_KEY_VAL" >> .env.subprocesses
             echo "SQUARE_WEBHOOK_URL=$SQUARE_WEBHOOK_URL" >> .env.subprocesses
-            echo "SYNC_SERVICE_PORT=$SYNC_SERVICE_PORT" >> .env.subprocesses
+            echo "CONTACT_SYNC_PORT=$CONTACT_SYNC_PORT" >> .env.subprocesses
             echo "WEBFORM_STORAGE=$WEBFORM_STORAGE_VAL" >> .env.subprocesses
             echo "GOOGLE_CREDENTIALS_FILE=$GOOGLE_CREDENTIALS_FILE_VAL" >> .env.subprocesses
             echo "GOOGLE_TOKEN_FILE=$GOOGLE_TOKEN_FILE_VAL" >> .env.subprocesses
@@ -248,9 +248,9 @@ jobs:
             echo "SMTP_FROM=$SMTP_FROM_VAL" >> .env.subprocesses
             echo "EMAIL_RECIPIENT=$EMAIL_RECIPIENT_VAL" >> .env.subprocesses
             echo "N8N_WEBHOOK_URL=$N8N_WEBHOOK_URL" >> .env.subprocesses
-            echo "EMAIL_SERVICE_PORT=$EMAIL_SERVICE_PORT" >> .env.subprocesses
+            echo "EMAIL_SERIVCE_PORT=$EMAIL_SERIVCE_PORT" >> .env.subprocesses
             echo "MESSAGE_ROUTER_PORT=$MESSAGE_ROUTER_PORT" >> .env.subprocesses
-            echo "NODEIFIER_PORT=$NODEIFIER_PORT" >> .env.subprocesses
+            echo "NODEIFIER_SERVICE_PORT=$NODEIFIER_SERVICE_PORT" >> .env.subprocesses
 
             # Pre-create the bridge network so other stacks can share it as 'external'
             echo "Ensuring frontend bridge network exists..."

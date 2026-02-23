@@ -3,7 +3,7 @@
 # Simple test script for the nodeifier service
 # This will send a test payload to the local nodeifier service
 
-PORT=${1:-3003}
+PORT=${1:-4312}
 URL="http://localhost:$PORT/push"
 
 echo "Testing nodeifier at $URL..."

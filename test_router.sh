@@ -3,7 +3,7 @@
 # Test script for the new Message Router
 # This simulates a frontend submission to the centralized router
 
-PORT=${1:-3001}
+PORT=${1:-4300}
 URL="http://localhost:$PORT/submit"
 
 echo "Testing Message Router at $URL..."

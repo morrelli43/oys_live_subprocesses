@@ -41,7 +41,7 @@ app.post('/push', async (req, res) => {
     }
 });
 
-const PORT = process.env.PORT || 3003;
+const PORT = process.env.PORT || 4312;
 app.listen(PORT, () => {
     console.log(`Nodeifier listening on port ${PORT}`);
     console.log(`Target Webhook: ${process.env.PUSH_WEBHOOK_URL || 'Using default n8n URL'}`);
