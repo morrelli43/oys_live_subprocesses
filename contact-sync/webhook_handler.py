@@ -24,7 +24,7 @@ class WebhookServer:
         self.app.route('/webhooks/square', methods=['POST'])(self.handle_square)
 
     def health_check(self):
-        return jsonify({"status": "ok", "version": "v2.0"}), 200
+        return jsonify({"status": "ok", "version": "v2.4.0"}), 200
 
     def trigger_sync(self):
         """Manually trigger a full sync pass in the background."""

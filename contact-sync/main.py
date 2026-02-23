@@ -70,7 +70,7 @@ def run_sync_loop(engine, interval_secs):
 def serve():
     """Run the unified V2 Sync Server process."""
     print("\n============================================================")
-    print("STARTING UNIFIED SYNC SERVER v2.3.0")
+    print("STARTING UNIFIED SYNC SERVER v2.4.0")
     print("============================================================\n")
     
     engine = SyncEngine()

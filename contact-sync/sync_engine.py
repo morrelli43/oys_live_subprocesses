@@ -20,11 +20,14 @@ class SyncEngine:
         self.connectors[name] = connector
 
     def _ensure_custom_id(self, contact: Contact):
-        """Ensure a contact has a custom cst-XXXXXXXXX ID."""
+        """Ensure a contact has a custom cst-XXXXXXXXX ID (Exactly 13 chars)."""
         import random
-        if not getattr(contact, 'custom_id', None):
+        cid = getattr(contact, 'custom_id', None)
+        # If it's missing, empty, or not the new 9-digit format (cst- + 9 digits = 13 chars)
+        if not cid or not str(cid).startswith("cst-") or len(str(cid)) != 13:
+            old_id = cid
             contact.custom_id = f"cst-{random.randint(100000000, 999999999)}"
-            print(f"  Generated new Custom ID for contact: {contact.custom_id} ({contact.first_name} {contact.last_name})")
+            print(f"  [ID_GEN] Assigned {contact.custom_id} to {contact.first_name} {contact.last_name} (Previous: {old_id})")
     
     def process_incoming_webhook(self, data: dict, source_name: str = 'webform'):
         """
@@ -109,7 +112,7 @@ class SyncEngine:
             
         try:
             print("=" * 60)
-            print("Starting v2.3.0 synchronization cycle")
+            print("Starting v2.4.0 synchronization cycle")
             print("=" * 60)
             
             self.store.clear()
