@@ -78,7 +78,13 @@ class WebhookServer:
             merchant_id = payload.get('merchant_id', 'Unknown')
             print(f"  Event Type: {event_type} (Merchant: {merchant_id})")
                 
-            if event_type in ['customer.created', 'customer.updated']:
+            # Trigger sync for any customer-related data change
+            is_customer_change = (
+                event_type in ['customer.created', 'customer.updated'] or
+                (event_type and event_type.startswith('customer.custom_attribute.'))
+            )
+
+            if is_customer_change:
                 print(f"  --> Triggering background sync_all...")
                 self._run_in_background(self.engine.sync_all)
             elif event_type == 'customer.deleted':

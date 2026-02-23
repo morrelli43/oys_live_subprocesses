@@ -92,7 +92,9 @@ class SyncEngine:
                 print("WARNING: Webhook payload missing parseable phone, dropping.")
                 return False
                 
-            self.store.add_contact(contact, source_of_truth=source_name)
+            # Webforms are authoritative for the data they PROVIDE, but they 
+            # should trigger a Square push.
+            self.store.add_contact(contact, source_of_truth=source_name, authoritative=True)
             
             # Instant Push to Square only.
             # The Square webhook will fire back and trigger a full sync to Google.
@@ -127,7 +129,7 @@ class SyncEngine:
                         # Snaphot the exact payload Square gave us
                         c._original_square_payload = self.connectors['square']._contact_to_customer(c)
                         c._original_square_attrs = {k: v for k, v in c.extra_fields.items() if k in ['escooter1', 'escooter2', 'escooter3']}
-                        added_id = self.store.add_contact(c, source_of_truth='square')
+                        added_id = self.store.add_contact(c, source_of_truth='square', authoritative=True)
                         if added_id:
                              # Preserve original payloads on the canonical contact in our temporary store
                              self.store.contacts[added_id]._original_square_payload = c._original_square_payload
@@ -149,7 +151,8 @@ class SyncEngine:
                         # Snapshot the exact payload Google gave us
                         c._original_google_payload = self.connectors['google']._contact_to_person(c)
                         # Add them, enforcing Square as the persistent source of truth
-                        added_id = self.store.add_contact(c, source_of_truth='square')
+                        # Google is a MIRROR, so authoritative=False
+                        added_id = self.store.add_contact(c, source_of_truth='square', authoritative=False)
                         
                         # Store the google payload on the unified canonical object so we can dirty-check later
                         self.store.contacts[added_id]._original_google_payload = c._original_google_payload

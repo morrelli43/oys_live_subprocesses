@@ -99,25 +99,36 @@ class Contact:
         """Returns the universally normalized phone number for matching."""
         return normalize_phone(self.phone)
 
-    def merge_with(self, other: 'Contact', source_of_truth: str = 'square') -> 'Contact':
+    def merge_with(self, other: 'Contact', source_of_truth: str = 'square', other_is_authoritative: bool = False) -> 'Contact':
         """
         Merge this contact with another.
-        If source_of_truth is specified, fields from that source explicitly clobber the other.
+        If other_is_authoritative is True, the incoming 'other' contact's fields ALWAYS win.
+        Otherwise, we use source_of_truth and timestamp logic.
         """
-        # Determine strict supremacy
-        other_is_truth = (source_of_truth in other.source_ids)
-        self_is_truth = (source_of_truth in self.source_ids)
-        
-        # If both are the source of truth (e.g. merging two square records?? shouldn't happen),
-        # or neither is (e.g. memory webform + google fallback), fallback to timestamp
-        if other_is_truth and not self_is_truth:
+        # 1. Authoritative Override
+        if other_is_authoritative:
             other_wins = True
-        elif self_is_truth and not other_is_truth:
-            other_wins = False
         else:
-            self_mod = self.last_modified if self.last_modified.tzinfo else self.last_modified.replace(tzinfo=timezone.utc)
-            other_mod = other.last_modified if other.last_modified.tzinfo else other.last_modified.replace(tzinfo=timezone.utc)
-            other_wins = (other_mod > self_mod)
+            # 2. Determine strict supremacy based on source existence
+            other_is_truth = (source_of_truth in other.source_ids)
+            self_is_truth = (source_of_truth in self.source_ids)
+            
+            # If the new one isn't authoritative, but we (self) ARE the truth from a previous
+            # authoritative add in this session, then we win unconditionally.
+            if self_is_truth and not other_is_authoritative:
+                other_wins = False
+            elif other_is_truth and not self_is_truth:
+                other_wins = True
+            elif self_is_truth and other_is_truth:
+                # Both claim to have source data. Check timestamps.
+                self_mod = self.last_modified if self.last_modified.tzinfo else self.last_modified.replace(tzinfo=timezone.utc)
+                other_mod = other.last_modified if other.last_modified.tzinfo else other.last_modified.replace(tzinfo=timezone.utc)
+                other_wins = (other_mod > self_mod)
+            else:
+                # Neither is truth, use timestamp
+                self_mod = self.last_modified if self.last_modified.tzinfo else self.last_modified.replace(tzinfo=timezone.utc)
+                other_mod = other.last_modified if other.last_modified.tzinfo else other.last_modified.replace(tzinfo=timezone.utc)
+                other_wins = (other_mod > self_mod)
 
         if other_wins:
             if source_of_truth and other_is_truth:
@@ -251,7 +262,7 @@ class ContactStore:
         self.contacts: Dict[str, Contact] = {}
         self.phone_index: Dict[str, str] = {}  # canonical 04... phone -> contact_id
         
-    def add_contact(self, contact: Contact, source_of_truth: str = 'square') -> str:
+    def add_contact(self, contact: Contact, source_of_truth: str = 'square', authoritative: bool = False) -> str:
         """Add or merge a contact by strict phone match."""
         # Enforce defaults for AU
         for addr in contact.addresses:
@@ -269,7 +280,7 @@ class ContactStore:
             
         if existing_id:
             # Merge into the existing contact
-            self.contacts[existing_id].merge_with(contact, source_of_truth=source_of_truth)
+            self.contacts[existing_id].merge_with(contact, source_of_truth=source_of_truth, other_is_authoritative=authoritative)
             self._update_indexes(self.contacts[existing_id])
             return existing_id
             
