@@ -170,7 +170,7 @@ class GoogleContactsConnector:
                     contact.extra_fields[key] = value
                 elif key == 'square_id':
                     contact.source_ids['square'] = value
-                elif key == 'custom_id':
+                elif key == 'custom_id' or key == 'customer_uid':
                     contact.custom_id = value
         
         # Extract last modified time from metadata
@@ -407,11 +407,11 @@ class GoogleContactsConnector:
                 'value': square_id
             })
             
-        # Also store the overarching Custom ID (cst-XXXXXX)
+        # Also store the overarching Custom ID (cst-XXXXXXXXX) as customer_uid
         custom_id = getattr(contact, 'custom_id', None)
         if custom_id:
             person['userDefined'].append({
-                'key': 'custom_id',
+                'key': 'customer_uid',
                 'value': custom_id
             })
         
