@@ -19,11 +19,18 @@ class WebhookServer:
 
         # Register Routes
         self.app.route('/health', methods=['GET'])(self.health_check)
+        self.app.route('/sync', methods=['GET'])(self.trigger_sync)
         self.app.route('/submit', methods=['POST', 'OPTIONS'])(self.handle_webform)
         self.app.route('/webhooks/square', methods=['POST'])(self.handle_square)
 
     def health_check(self):
         return jsonify({"status": "ok", "version": "v2.0"}), 200
+
+    def trigger_sync(self):
+        """Manually trigger a full sync pass in the background."""
+        import threading
+        threading.Thread(target=self.engine.sync_all).start()
+        return jsonify({"status": "success", "message": "Manual sync triggered in background"}), 200
 
     def handle_webform(self):
         """Immediately parse and drop webforms into the sync engine memory."""
