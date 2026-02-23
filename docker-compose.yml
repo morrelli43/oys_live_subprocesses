@@ -1,7 +1,7 @@
 services:
   contact-sync:
     build: ./contact-sync
-    image: ghcr.io/morrelli43/contact_sync:main
+    image: ghcr.io/morrelli43/oys_live_subprocesses:${IMAGE_TAG:-main}
     container_name: "contact-sync"
     restart: unless-stopped
     environment:
@@ -22,7 +22,7 @@ services:
 
   email-service:
     build: ./email-service
-    image: ghcr.io/morrelli43/contact_sync_email_service:${IMAGE_TAG:-main}
+    image: ghcr.io/morrelli43/oys_live_subprocesses_email_service:${IMAGE_TAG:-main}
     container_name: "email-service"
     restart: unless-stopped
     environment:
