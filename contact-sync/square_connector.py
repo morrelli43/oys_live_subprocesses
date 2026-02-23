@@ -190,6 +190,11 @@ class SquareConnector:
         if customer_id:
             contact.source_ids['square'] = customer_id
             
+        # Extract custom customer ID from reference_id
+        ref_id = customer.get('reference_id')
+        if ref_id:
+            contact.custom_id = ref_id
+            
         # Extract Custom Attributes
         custom_attrs = custom_attrs or customer.get('custom_attributes', {})
         
@@ -292,6 +297,11 @@ class SquareConnector:
             customer['given_name'] = contact.first_name
         if contact.last_name:
             customer['family_name'] = contact.last_name
+            
+        # Custom ID mapped to Square reference_id
+        custom_id = getattr(contact, 'custom_id', None)
+        if custom_id:
+            customer['reference_id'] = custom_id
         
         # Email
         if contact.email:

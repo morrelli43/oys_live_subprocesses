@@ -18,6 +18,12 @@ class SyncEngine:
     def register_connector(self, name: str, connector):
         """Register a contact source connector."""
         self.connectors[name] = connector
+
+    def _ensure_custom_id(self, contact: Contact):
+        """Ensure a contact has a custom cst-XXXXXXXXX ID."""
+        import random
+        if not getattr(contact, 'custom_id', None):
+            contact.custom_id = f"cst-{random.randint(100000000, 999999999)}"
     
     def process_incoming_webhook(self, data: dict, source_name: str = 'webform'):
         """
@@ -72,6 +78,9 @@ class SyncEngine:
             # Set memory ID
             import time
             contact.source_ids[source_name] = str(time.time())
+            
+            # Ensure custom ID (cst-XXXXXX) is assigned immediately
+            self._ensure_custom_id(contact)
             
             # Drop the webform directly into the store so it has memory presence
             # then instantly push to Square.
@@ -234,6 +243,11 @@ class SyncEngine:
     def push_to_all_sources(self, contacts: List[Contact]) -> bool:
         print("\nPushing normalized contacts back to all destinations...")
         success = True
+        
+        # Ensure every contact gets a unique custom ID assigned before pushing
+        for contact in contacts:
+            self._ensure_custom_id(contact)
+        
         
         for source_name, connector in self.connectors.items():
             if not hasattr(connector, 'push_contact'):

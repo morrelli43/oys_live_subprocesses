@@ -92,6 +92,7 @@ class Contact:
         self.last_modified: datetime = datetime.now(timezone.utc)
         self.addresses: List[Dict[str, str]] = []
         self.extra_fields: Dict[str, str] = {}
+        self.custom_id: Optional[str] = None
         
     @property
     def normalized_phone(self) -> str:
@@ -173,6 +174,8 @@ class Contact:
                     if k not in self.extra_fields or not self.extra_fields[k]:
                         self.extra_fields[k] = v
 
+        self.custom_id = self.custom_id or other.custom_id
+
         # Source IDs are ALWAYS combined additively
         self.source_ids.update(other.source_ids)
         
@@ -201,6 +204,7 @@ class Contact:
     def to_dict(self) -> Dict:
         return {
             'contact_id': self.contact_id,
+            'custom_id': getattr(self, 'custom_id', None),
             'first_name': self.first_name,
             'last_name': self.last_name,
             'email': self.email,
@@ -216,6 +220,7 @@ class Contact:
     @staticmethod
     def from_dict(data: Dict) -> 'Contact':
         contact = Contact(data.get('contact_id'))
+        contact.custom_id = data.get('custom_id')
         contact.first_name = data.get('first_name')
         contact.last_name = data.get('last_name')
         contact.email = data.get('email')
