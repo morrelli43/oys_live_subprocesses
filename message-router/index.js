@@ -43,7 +43,7 @@ app.post('/submit', async (req, res) => {
         timestamp: new Date().toISOString()
     };
 
-    // --- 2. Map to node-box (Alerts) ---
+    // --- 2. Map to nodeifier (Alerts) ---
     const alertPayload = {
         app: "pushbullet",
         target: "dandroid",
@@ -54,7 +54,7 @@ app.post('/submit', async (req, res) => {
     // Define service URLs
     const contactSyncUrl = process.env.CONTACT_SYNC_URL || 'http://contact-sync:7173/submit';
     const emailServiceUrl = process.env.EMAIL_SERVICE_URL || 'http://email-service:3002/send-email';
-    const nodeBoxUrl = process.env.NODE_BOX_URL || 'http://node-box:3003/push';
+    const nodeifierUrl = process.env.NODEIFIER_URL || 'http://nodeifier:3003/push';
 
     // Fan out requests in background
     console.log(`[Message Router] Routing to sub-processes...`);
@@ -67,10 +67,10 @@ app.post('/submit', async (req, res) => {
         .then(() => console.log('✅ Routed to Contact-Sync'))
         .catch(err => console.error('⚠️ Contact-Sync routing failed:', err.message));
 
-    // 2. Trigger Node-Box (Alerts)
-    axios.post(nodeBoxUrl, alertPayload)
-        .then(() => console.log('✅ Routed to Node-Box'))
-        .catch(err => console.error('⚠️ Node-Box routing failed:', err.message));
+    // 2. Trigger Nodeifier (Alerts)
+    axios.post(nodeifierUrl, alertPayload)
+        .then(() => console.log('✅ Routed to Nodeifier'))
+        .catch(err => console.error('⚠️ Nodeifier routing failed:', err.message));
 
     // 3. Trigger Email-Service
     axios.post(emailServiceUrl, rawData)
@@ -88,5 +88,5 @@ app.listen(PORT, () => {
     console.log(`Message Router listening on port ${PORT}`);
     console.log(`Contact-Sync: ${process.env.CONTACT_SYNC_URL || 'http://contact-sync:7173/submit'}`);
     console.log(`Email-Service: ${process.env.EMAIL_SERVICE_URL || 'http://email-service:3002/send-email'}`);
-    console.log(`Node-Box: ${process.env.NODE_BOX_URL || 'http://node-box:3003/push'}`);
+    console.log(`Nodeifier: ${process.env.NODEIFIER_URL || 'http://nodeifier:3003/push'}`);
 });

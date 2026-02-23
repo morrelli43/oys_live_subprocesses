@@ -78,23 +78,23 @@ jobs:
           cache-to: type=gha,mode=max
           build-args: CACHE_BUST=${{ github.sha }}
 
-      - name: Extract metadata for node-box
-        id: meta_nodebox
+      - name: Extract metadata for nodeifier
+        id: meta_nodeifier
         uses: docker/metadata-action@v5
         with:
-          images: ${{ env.REGISTRY }}/${{ github.repository }}_node_box
+          images: ${{ env.REGISTRY }}/${{ github.repository }}_nodeifier
           tags: |
             type=ref,event=branch
             type=sha,format=long
 
-      - name: Build and push node-box
+      - name: Build and push nodeifier
         uses: docker/build-push-action@v5
         with:
-          context: ./node-box
+          context: ./nodeifier
           push: true
           platforms: linux/amd64,linux/arm64
-          tags: ${{ steps.meta_nodebox.outputs.tags }}
-          labels: ${{ steps.meta_nodebox.outputs.labels }}
+          tags: ${{ steps.meta_nodeifier.outputs.tags }}
+          labels: ${{ steps.meta_nodeifier.outputs.labels }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
           build-args: CACHE_BUST=${{ github.sha }}
@@ -190,7 +190,7 @@ jobs:
           GOOGLE_TOKEN_FILE_VAL: ${{ secrets.GOOGLE_TOKEN_FILE }}
           GRIST_API_KEY_VAL: ${{ secrets.GRIST_API_KEY }}
           MESSAGE_ROUTER_PORT: ${{ vars.MESSAGE_ROUTER_PORT }}
-          NODE_BOX_PORT: ${{ vars.NODE_BOX_PORT }}
+          NODEIFIER_PORT: ${{ vars.NODEIFIER_PORT }}
 
         run: |
           # Define environment-specific variables
@@ -250,7 +250,7 @@ jobs:
             echo "N8N_WEBHOOK_URL=$N8N_WEBHOOK_URL" >> .env.subprocesses
             echo "EMAIL_SERVICE_PORT=$EMAIL_SERVICE_PORT" >> .env.subprocesses
             echo "MESSAGE_ROUTER_PORT=$MESSAGE_ROUTER_PORT" >> .env.subprocesses
-            echo "NODE_BOX_PORT=$NODE_BOX_PORT" >> .env.subprocesses
+            echo "NODEIFIER_PORT=$NODEIFIER_PORT" >> .env.subprocesses
 
             # Pre-create the bridge network so other stacks can share it as 'external'
             echo "Ensuring frontend bridge network exists..."

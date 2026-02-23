@@ -1,5 +1,5 @@
 {
-    "name": "message-center",
+    "name": "nodeifier",
     "version": "1.0.0",
     "description": "Centralized messaging and alerting service",
     "main": "index.js",
