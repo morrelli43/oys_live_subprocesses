@@ -68,50 +68,6 @@ On Ya Scoot Booking System
         await transporter.sendMail(mailOptions);
         console.log(`✅ Email sent for ${first_name} ${surname}`);
 
-        // --- Forward to Sync Server (Internal) ---
-        // Fire and forget - don't block response
-        // Requires 'axios' (ensure it's in package.json)
-        const axios = require('axios');
-
-        const syncData = {
-            first_name: first_name,
-            last_name: surname,
-            phone: number,
-            email: "",
-            address_line_1: address_line_1 || "",
-            suburb: suburb || "",
-            state: state || "",
-            postcode: postcode || "",
-            country: country || "",
-            company: "",
-            notes: `${issue}: ${issue_extra || ''}`,
-            escooter1: `${escooter_make} ${escooter_model}`,
-            timestamp: new Date().toISOString()
-        };
-
-        // Use Docker service name for internal communication
-        const syncUrl = process.env.SYNC_SERVICE_URL || 'http://contact-sync:7173/submit';
-
-        console.log(`Forwarding to sync server: ${syncUrl}`);
-        axios.post(syncUrl, syncData)
-            .then(() => console.log('✅ Synced to contact-service'))
-            .catch(err => console.error('⚠️ Sync failed:', err.message));
-
-        // --- Forward to Message Center (Internal) ---
-        const messageCenterUrl = process.env.MESSAGE_CENTER_URL || 'http://message-center:3003/push';
-        const alertPayload = {
-            app: "pushbullet",
-            target: "dandroid",
-            title: `Submit ${first_name}, ${issue}`,
-            body: `Name: ${first_name} ${surname}\nPhone: ${number}\nIssue: ${issue}\n`
-        };
-
-        console.log(`Forwarding alert to message center: ${messageCenterUrl}`);
-        axios.post(messageCenterUrl, alertPayload)
-            .then(() => console.log("✅ Alert sent to Message Center successfully."))
-            .catch(error => console.error("❌ Error sending Message Center alert:", error.message));
-        // ----------------------------------------------
-
         res.status(200).json({ success: true, message: 'Email sent successfully' });
     } catch (error) {
         console.error('❌ SMTP Error:', error);

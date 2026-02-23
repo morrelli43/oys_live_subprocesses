@@ -9,7 +9,7 @@ app.use(cors());
 
 // Health check endpoint
 app.get('/health', (req, res) => {
-    res.status(200).json({ status: 'ok', service: 'message-center', version: '1.0.0' });
+    res.status(200).json({ status: 'ok', service: 'node-box', version: '1.0.0' });
 });
 
 /**
@@ -18,7 +18,7 @@ app.get('/health', (req, res) => {
 app.post('/push', async (req, res) => {
     const payload = req.body;
 
-    console.log(`\n[Message Center] Received push request: ${payload.title || 'No Title'}`);
+    console.log(`\n[Node-Box] Received push request: ${payload.title || 'No Title'}`);
 
     // External Webhook URL (e.g. n8n)
     const pushWebhookUrl = process.env.PUSH_WEBHOOK_URL || 'https://hooks.morrelli43media.com/webhook/message-center';
@@ -43,6 +43,6 @@ app.post('/push', async (req, res) => {
 
 const PORT = process.env.PORT || 3003;
 app.listen(PORT, () => {
-    console.log(`Message Center listening on port ${PORT}`);
+    console.log(`Node-Box listening on port ${PORT}`);
     console.log(`Target Webhook: ${process.env.PUSH_WEBHOOK_URL || 'Using default n8n URL'}`);
 });

@@ -78,23 +78,44 @@ jobs:
           cache-to: type=gha,mode=max
           build-args: CACHE_BUST=${{ github.sha }}
 
-      - name: Extract metadata for message-center
-        id: meta_message
+      - name: Extract metadata for node-box
+        id: meta_nodebox
         uses: docker/metadata-action@v5
         with:
-          images: ${{ env.REGISTRY }}/${{ github.repository }}_message_center
+          images: ${{ env.REGISTRY }}/${{ github.repository }}_node_box
           tags: |
             type=ref,event=branch
             type=sha,format=long
 
-      - name: Build and push message-center
+      - name: Build and push node-box
         uses: docker/build-push-action@v5
         with:
-          context: ./message-center
+          context: ./node-box
           push: true
           platforms: linux/amd64,linux/arm64
-          tags: ${{ steps.meta_message.outputs.tags }}
-          labels: ${{ steps.meta_message.outputs.labels }}
+          tags: ${{ steps.meta_nodebox.outputs.tags }}
+          labels: ${{ steps.meta_nodebox.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          build-args: CACHE_BUST=${{ github.sha }}
+
+      - name: Extract metadata for message-router
+        id: meta_router
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ github.repository }}_message_router
+          tags: |
+            type=ref,event=branch
+            type=sha,format=long
+
+      - name: Build and push message-router
+        uses: docker/build-push-action@v5
+        with:
+          context: ./message-router
+          push: true
+          platforms: linux/amd64,linux/arm64
+          tags: ${{ steps.meta_router.outputs.tags }}
+          labels: ${{ steps.meta_router.outputs.labels }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
           build-args: CACHE_BUST=${{ github.sha }}
@@ -168,7 +189,8 @@ jobs:
           GOOGLE_CREDENTIALS_FILE_VAL: ${{ secrets.GOOGLE_CREDENTIALS_FILE }}
           GOOGLE_TOKEN_FILE_VAL: ${{ secrets.GOOGLE_TOKEN_FILE }}
           GRIST_API_KEY_VAL: ${{ secrets.GRIST_API_KEY }}
-          MESSAGE_CENTER_PORT: ${{ vars.MESSAGE_CENTER_PORT }}
+          MESSAGE_ROUTER_PORT: ${{ vars.MESSAGE_ROUTER_PORT }}
+          NODE_BOX_PORT: ${{ vars.NODE_BOX_PORT }}
 
         run: |
           # Define environment-specific variables
@@ -227,7 +249,8 @@ jobs:
             echo "EMAIL_RECIPIENT=$EMAIL_RECIPIENT_VAL" >> .env.subprocesses
             echo "N8N_WEBHOOK_URL=$N8N_WEBHOOK_URL" >> .env.subprocesses
             echo "EMAIL_SERVICE_PORT=$EMAIL_SERVICE_PORT" >> .env.subprocesses
-            echo "MESSAGE_CENTER_PORT=$MESSAGE_CENTER_PORT" >> .env.subprocesses
+            echo "MESSAGE_ROUTER_PORT=$MESSAGE_ROUTER_PORT" >> .env.subprocesses
+            echo "NODE_BOX_PORT=$NODE_BOX_PORT" >> .env.subprocesses
 
             # Pre-create the bridge network so other stacks can share it as 'external'
             echo "Ensuring frontend bridge network exists..."

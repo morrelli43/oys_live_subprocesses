@@ -33,24 +33,38 @@ services:
       - SMTP_PASS=${SMTP_PASS}
       - SMTP_FROM=${SMTP_FROM}
       - EMAIL_RECIPIENT=${EMAIL_RECIPIENT:-bookings@onyascoot.com}
-      - SYNC_SERVICE_URL=http://contact-sync:7173/submit
-      - MESSAGE_CENTER_URL=http://message-center:3003/push
     ports:
       - "${EMAIL_SERVICE_PORT:-3002}:${EMAIL_SERVICE_PORT:-3002}"
     depends_on:
       - contact-sync
-      - message-center
 
-  message-center:
-    build: ./message-center
-    image: ghcr.io/morrelli43/oys_live_subprocesses_message_center:${IMAGE_TAG:-main}
-    container_name: "message-center"
+  node-box:
+    build: ./node-box
+    image: ghcr.io/morrelli43/oys_live_subprocesses_node_box:${IMAGE_TAG:-main}
+    container_name: "node-box"
     restart: unless-stopped
     environment:
       - PUSH_WEBHOOK_URL=${N8N_WEBHOOK_URL:-https://hooks.morrelli43media.com/webhook/message-center}
       - PORT=3003
     ports:
-      - "${MESSAGE_CENTER_PORT:-3003}:3003"
+      - "${NODE_BOX_PORT:-3003}:3003"
+
+  message-router:
+    build: ./message-router
+    image: ghcr.io/morrelli43/oys_live_subprocesses_message_router:${IMAGE_TAG:-main}
+    container_name: "message-router"
+    restart: unless-stopped
+    environment:
+      - PORT=3001
+      - CONTACT_SYNC_URL=http://contact-sync:7173/submit
+      - EMAIL_SERVICE_URL=http://email-service:3002/send-email
+      - NODE_BOX_URL=http://node-box:3003/push
+    ports:
+      - "${MESSAGE_ROUTER_PORT:-3001}:3001"
+    depends_on:
+      - contact-sync
+      - email-service
+      - node-box
 
 networks:
   default:
