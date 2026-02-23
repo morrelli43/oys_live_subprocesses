@@ -1,318 +1,116 @@
-# Contact Sync
+# OYS Live Subprocesses 🚀
 
-A contact synchronization system that connects Google Contacts, Square Up, and a custom web form to create a unified contact list across all platforms.
+A modular microservice stack designed to handle contact synchronization, automated alerts, and specialized routing for the OYS platform.
 
-## Features
+## 🏗️ Architecture Overview
 
-- **Multi-Source Sync**: Collect contacts from Google Contacts, Square Up, and a custom web form
-- **Smart Merging**: Automatically merge duplicate contacts while preserving all information
-- **Bidirectional Sync**: Push updates back to Google Contacts and Square Up
-- **Change Detection**: When a contact is updated in one source, the change propagates to others
-- **Unified Sync Server**: Single command to handle Web Form, Square Webhooks, and Periodic Sync
-- **Real-Time Webhooks**: Instant sync when Square contacts change
-- **Web Form**: Simple web interface for collecting new contacts
+The system architecture has been modernized into a specialized routing stack to ensure smooth frontend integration and reliable data propagation.
 
-## Architecture
-
-The system consists of several components:
-
-1. **Contact Model** (`contact_model.py`): Core data structures for contacts with merge capabilities
-2. **Connectors**: Individual connectors for each contact source
-   - Google Contacts (`google_connector.py`)
-   - Square Up (`square_connector.py`)
-   - Web Form (`webform_connector.py`)
-3. **Sync Engine** (`sync_engine.py`): Orchestrates synchronization across all sources
-4. **Webhook Handler** (`webhook_handler.py`): Receives real-time notifications from Square
-5. **Main Application** (`main.py`): CLI interface for running sync operations
-
-## Installation
-
-1. Clone the repository:
-```bash
-git clone https://github.com/morrelli43/contact_sync.git
-cd contact_sync
+```mermaid
+graph TD
+    A[Frontend / Mobile App] -->|POST /submit| B(Message Router - Port 4300)
+    B -->|Async Fan-out| C[Contact Sync - Port 4310]
+    B -->|Async Fan-out| D[Email Service - Port 4311]
+    B -->|Async Fan-out| E[Nodeifier - Port 4312]
+    
+    C -->|API| G[Google Contacts]
+    C -->|API| S[Square Up]
+    D -->|SMTP| M[Recipient Inbox]
+    E -->|Webhook| N[Alerting Systems / n8n]
 ```
 
-2. Install dependencies:
-```bash
-pip install -r requirements.txt
-```
+## 📦 Services Summary
 
-3. Configure the application (see Configuration section below)
+| Service | Port | Description |
+| :--- | :--- | :--- |
+| **Message Router** | `4300` | The primary entry point. Transforms raw JSON and routes it downstream. |
+| **Contact Sync** | `4310` | Synchronizes data between Square, Google, and local storage. |
+| **Email Service** | `4311` | Pure SMTP service for sending alerts and confirmations. |
+| **Nodeifier** | `4312` | Centralized alerting service for pushing notifications to webhooks. |
 
-## Configuration
+---
 
-### 1. Copy the example configuration:
-```bash
-cp .env.example .env
-```
+## 🚀 Getting Started
 
-### 2. Configure Google Contacts (Optional)
+### Prerequisites
 
-1. Go to [Google Cloud Console](https://console.cloud.google.com/)
-2. Create a new project or select an existing one
-3. Enable the People API
-4. Create OAuth 2.0 credentials (Desktop application)
-5. Download the credentials as `credentials.json` in the project directory
-6. Set `ENABLE_GOOGLE=true` in `.env`
+- Docker and Docker Compose
+- Node.js (for local service development)
+- Python 3.11+ (for Contact Sync development)
 
-### 3. Configure Square Up (Optional)
+### Environment Configuration
 
-1. Go to [Square Developer Dashboard](https://developer.squareup.com/)
-2. Create an application or select an existing one
-3. Get your access token (use sandbox token for testing)
-4. Add your token to `.env`:
-```
-ENABLE_SQUARE=true
-SQUARE_ACCESS_TOKEN=your_token_here
-```
-
-### 4. Configure Web Form (Enabled by default)
-
-The web form is enabled by default and requires no additional configuration. Contacts are stored in `webform_contacts.json`.
-
-## Docker
-
-Build the image:
-```bash
-docker build -t contact-sync .
-```
-
-Run sync using your `.env` file (mounting the project directory keeps data files like `webform_contacts.json`):
-```bash
-docker run --env-file .env -v $(pwd):/app contact-sync sync
-```
-
-Example `docker-compose.yml`:
-```yaml
-services:
-  contact-sync:
-    build: .
-    command: ["serve"]
-    env_file: .env
-    volumes:
-      - ./:/app
-    ports:
-      - "7173:7173"   # webform
-      - "5001:5001"   # webhook
-```
-
-For the unified server, expose all interfaces inside the container:
-- Unified Server: `docker compose run --service-ports contact-sync serve --host 0.0.0.0`
-
-### Always-On Unified Server (Recommended)
-
-Start the unified server to handle everything (Web Form, Webhooks, and Periodic Sync):
-```bash
-python main.py serve
-```
-This is the best way to run the application in production or Docker.
-
-## Usage
-
-### Manual Synchronize Contacts
-
-Run a full synchronization cycle:
-```bash
-python main.py sync
-```
-
-This will:
-1. Fetch contacts from all enabled sources
-2. Merge duplicate contacts intelligently
-3. Push merged contacts back to Google and Square
-4. Save sync state for tracking
-
-### View Statistics
-
-Display contact statistics:
-```bash
-python main.py stats
-```
-
-### Export Contacts
-
-Export all contacts to JSON:
-```bash
-python main.py export --file contacts_backup.json
-```
-
-### Import Contacts
-
-Import contacts from JSON:
-```bash
-python main.py import --file contacts_backup.json
-```
-
-### Run Web Form Server
-
-Start the web form for collecting contacts:
-```bash
-python main.py webform --port 7173
-```
-
-Access the form at `http://localhost:7173`
-
-### Start Webhook Server (Real-Time Sync)
-
-For instant synchronization when Square contacts change:
-```bash
-python main.py webhook --webhook-port 5001
-```
-
-Configure the webhook URL in Square Dashboard. See [WEBHOOKS.md](WEBHOOKS.md) for detailed setup instructions.
-
-## Sync Methods
-
-The system supports two synchronization methods:
-
-1. **Scheduled/Manual Sync** (All sources)
+1. Copy the example environment file:
    ```bash
-   python main.py sync
+   cp .env.example .env
    ```
-   Run manually or schedule with cron for periodic synchronization.
+2. Configure the required secrets:
+   - `SQUARE_ACCESS_TOKEN`
+   - `SMTP_USER` / `SMTP_PASS`
+   - `GOOGLE_CREDENTIALS_FILE` (Path to JSON)
 
-2. **Real-Time Webhooks** (Square only)
-   ```bash
-   python main.py webhook
-   ```
-   Receives instant notifications when Square contacts change. Google Contacts doesn't support webhooks, so use scheduled sync for Google.
+---
 
-**📖 For webhook setup and real-time sync, see [WEBHOOKS.md](WEBHOOKS.md)**
+## 🛠️ Development & Deployment
 
-## How It Works
+### Docker Deployment (Recommended)
 
-### Contact Merging
+The stack is designed to run cohesively using Docker Compose.
 
-Contacts are merged based on email addresses. When two contacts share the same email:
-- All non-empty fields are preserved
-- Multiple addresses are combined
-- Source IDs are maintained for all sources
-- Notes are concatenated
-
-### Synchronization Flow
-
-1. **Fetch**: Retrieve contacts from all configured sources
-2. **Merge**: Combine contacts using intelligent deduplication
-3. **Push**: Update all sources with the merged contact list
-4. **Track**: Save sync state and timestamps
-
-### Change Propagation
-
-When a contact is updated in one source:
-1. The sync process detects the change based on modification time
-2. The updated contact is merged with existing data
-3. The merged contact is pushed to all other sources
-4. All sources maintain a consistent view
-
-## File Structure
-
-```
-contact_sync/
-├── main.py                  # CLI application
-├── contact_model.py         # Contact data structures
-├── sync_engine.py          # Synchronization logic
-├── google_connector.py     # Google Contacts API
-├── square_connector.py     # Square Up API
-├── webform_connector.py    # Web form server
-├── requirements.txt        # Python dependencies
-├── .env.example           # Configuration template
-├── .gitignore             # Git ignore rules
-└── README.md              # This file
-```
-
-## Running Automated Sync
-
-To run sync automatically, set up a cron job (Linux/Mac) or Task Scheduler (Windows):
-
-### Cron Example (every hour):
 ```bash
-0 * * * * cd /path/to/contact_sync && python main.py sync
+# Build and start the entire stack
+docker compose up -d
 ```
 
-## Security Notes
+### CI/CD Workflow
 
-- Keep your `.env` file secure and never commit it to version control
-- Store API credentials securely
-- Use environment-specific access tokens (sandbox vs. production)
-- The `credentials.json` and `token.json` files contain sensitive data
+Deployment is handled via GitHub Actions (`.github/workflows/docker-publish.yml`). 
+- **Staging**: Deploys on push to `staging` branch.
+- **Production**: Deploys on push to `live` or `main` branches.
 
-## Troubleshooting
+All images are built for multi-platform support (`linux/amd64`, `linux/arm64`) to support Raspberry Pi and cloud deployments.
 
-### Google Authentication Issues
-- Ensure `credentials.json` is in the project directory
-- Delete `token.json` to re-authenticate
-- Check that the People API is enabled in Google Cloud Console
+---
 
-### Square API Issues
-- Verify your access token is correct
-- Check if you're using the right environment (sandbox vs. production)
-- Ensure your Square account has the Customers API enabled
+## 🔌 API Interaction
 
-### Missing Contacts
-- Run `python main.py stats` to see contact counts per source
-- Check sync state in `sync_state.json`
-- Review logs for any error messages
+### Submitting Data
 
-## Development
+The **Message Router** is the single point of contact for the frontend.
 
-To contribute or modify the system:
+**Endpoint:** `POST http://<host>:4300/submit`
 
-1. Follow the modular architecture
-2. Each connector should implement `fetch_contacts()` and optionally `push_contact()`
-3. Add new connectors by creating a similar class structure
-4. Register new connectors in `main.py`
-
-## Running with Docker
-
-You can run the application using the pre-built Docker image from the GitHub Container Registry.
-
-1.  **Pull the image**:
-    ```bash
-    docker pull ghcr.io/morrelli43/contact_sync:main
-    ```
-
-2.  **Run the container**:
-    Since the application requires credentials (Google, Square) and environment variables, you need to mount the `env_files` directory and pass the `.env` file.
-
-    ```bash
-    docker run -d \
-      --name contact-sync \
-      -p 7173:7173 \
-      --env-file .env \
-      -v $(pwd)/env_files:/app/env_files \
-      ghcr.io/morrelli43/contact_sync:main
-    ```
-
-    *Note: Ensure your `.env` file and `env_files/` directory (containing `credentials.json`, etc.) are present in the current directory.*
-
-### Docker Compose Example
-
-Create a `docker-compose.yml` file:
-
-```yaml
-services:
-  contact-sync:
-    image: ghcr.io/morrelli43/contact_sync:main
-    container_name: "contact-sync"
-    restart: unless-stopped
-    # command: ["webform"] # Uncomment to run webform server
-    # command: ["sync"]    # Uncomment to run one-time sync
-    environment:
-      - WEBFORM_STORAGE=/app/env_files/webform_contacts.json
-      - GOOGLE_CREDENTIALS_FILE=/app/env_files/credentials.json
-      - GOOGLE_TOKEN_FILE=/app/env_files/token.json
-    volumes:
-      # Mount the user's specific data directory to /app/env_files
-      - ~/dockerhub/permadata/oys_contacts/env_files:/app/env_files
-    ports:
-      - "7173:7173"
+**Sample Payload:**
+```json
+{
+  "first_name": "John",
+  "last_name": "Doe",
+  "email": "john@example.com",
+  "phone": "0400000000",
+  "business_name": "Doe Enterprises",
+  "address_line_1": "123 Main St",
+  "suburb": "Sydney",
+  "state": "NSW",
+  "postcode": "2000"
+}
 ```
 
-## License
+---
 
-This project is open source. See LICENSE file for details.
+## 📁 Project Structure
 
-## Support
+```text
+oys_live_subprocesses/
+├── message-router/   # Entry point & fan-out logic (Node.js)
+├── contact-sync/     # Python Sync Engine (Square <-> Google)
+├── email-service/    # SMTP Sending Service (Node.js)
+├── nodeifier/        # Alerting & Webhook Service (Node.js)
+├── docker-compose.yml # Orchestration
+└── .github/          # CI/CD Workflows
+```
 
-For issues or questions, please open an issue on GitHub.
+---
+
+## ⚖️ License
+
+This project is specialized for OYS internal infrastructure. See LICENSE for details.

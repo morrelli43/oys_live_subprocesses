@@ -11,7 +11,7 @@ echo "Testing nodeifier at $URL..."
 curl -X POST "$URL" \
      -H "Content-Type: application/json" \
      -d '{
-       "app": "test-script",
+       "app": "pushbullet",
        "target": "dandroid",
        "title": "TEST ALERT",
        "body": "This is a test message from the local test script to verify nodeifier forwarding."
