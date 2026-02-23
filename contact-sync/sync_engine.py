@@ -166,7 +166,7 @@ class SyncEngine:
             success = self.push_to_all_sources(unified_contacts)
             
             print("\n" + "=" * 60)
-            print(f"v2.3.0 Synchronization cycle completed. {len(unified_contacts)} unique contacts.")
+            print(f"v2.4.0 Synchronization cycle completed. {len(unified_contacts)} unique contacts.")
             print("=" * 60)
             return success
             
@@ -273,6 +273,7 @@ class SyncEngine:
                     
                 # Intelligent dirty checking to prevent infinite loops and API burning
                 try:
+                    name_dbg = f"{contact.first_name} {contact.last_name}"
                     if source_name == 'square':
                         new_sq_payload = connector._contact_to_customer(contact)
                         new_sq_attrs = {k: v for k, v in contact.extra_fields.items() if k in ['escooter1', 'escooter2', 'escooter3']}
@@ -281,30 +282,29 @@ class SyncEngine:
                         orig_sq_attrs = getattr(contact, '_original_square_attrs', None)
                         
                         if orig_sq_payload is not None and orig_sq_payload == new_sq_payload and orig_sq_attrs == new_sq_attrs:
-                            # print(f"  Skipping {contact.first_name}... no changes for Square.")
+                            # print(f"  Skipping {name_dbg}... no changes for Square.")
                             continue
                         
                         if orig_sq_payload is None:
-                            print(f"  Contact {contact.first_name} has no original Square payload, pushing...")
-                        elif orig_sq_payload != new_sq_payload:
-                            print(f"  Contact {contact.first_name} Square payload changed, pushing...")
-                            # Debug: print what changed
-                            orig_ref = orig_sq_payload.get('reference_id')
-                            new_ref = new_sq_payload.get('reference_id')
-                            if orig_ref != new_ref:
-                                print(f"    Reference ID changed: {orig_ref} -> {new_ref}")
-                            else:
-                                print(f"    Payload changed but Reference ID same.")
+                            print(f"  Contact {name_dbg} is new to Square, pushing...")
+                        else:
+                            print(f"  Contact {name_dbg} changed in Square, pushing...")
                             
                     elif source_name == 'google':
                         new_go_payload = connector._contact_to_person(contact)
                         orig_go_payload = getattr(contact, '_original_google_payload', None)
                         
                         if orig_go_payload is not None and orig_go_payload == new_go_payload:
-                            # print(f"  Skipping {contact.first_name}... no changes for Google.")
+                            # Too much noise to log every single skip, but let's log if it was a source of truth change
+                            # print(f"  Skipping {name_dbg}... no changes for Google.")
                             continue
+                            
+                        if orig_go_payload is None:
+                            print(f"  Contact {name_dbg} is new to Google, pushing...")
+                        else:
+                            print(f"  Contact {name_dbg} changed for Google, pushing update...")
                 except Exception as e:
-                    print(f"  Warning during diff check: {e}")
+                    print(f"  Warning during diff check for {name_dbg}: {e}")
 
                 try:
                     if connector.push_contact(contact):
@@ -312,7 +312,7 @@ class SyncEngine:
                     else:
                         errors += 1
                 except Exception as e:
-                    print(f"  Error pushing contact {contact.first_name} {contact.last_name}: {e}")
+                    print(f"  Error pushing contact {name_dbg}: {e}")
                     errors += 1
                     success = False
             

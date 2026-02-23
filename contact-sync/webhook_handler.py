@@ -61,38 +61,58 @@ class WebhookServer:
     def handle_square(self):
         """Process real-time Square customer events."""
         print("\n[WebhookServer] Received Square Event")
-        signature = request.headers.get('x-square-hmacsha256-signature')
         
-        if self.square_signature_key and self.square_webhook_url:
-            if not signature or not self._verify_square_signature(request.get_data(), signature):
-                print("  Invalid Square signature")
-                return jsonify({'error': 'Unauthorized'}), 401
+        try:
+            signature = request.headers.get('x-square-hmacsha256-signature')
+            if self.square_signature_key and self.square_webhook_url:
+                if not signature or not self._verify_square_signature(request.get_data(), signature):
+                    print("  Invalid Square signature")
+                    return jsonify({'error': 'Unauthorized'}), 401
+                    
+            payload = request.get_json(silent=True)
+            if not payload:
+                print("  Empty or invalid JSON payload")
+                return jsonify({'status': 'ignored', 'reason': 'no_json'}), 200
                 
-        # For Square webhooks, we actually just trigger a global sync
-        # Since Square is the source of truth, pulling the fresh data from Square
-        # and forcefully distributing it outward is safest.
-        payload = request.json
-        if not payload:
-            return jsonify({'error': 'Invalid payload'}), 400
-            
-        event_type = payload.get('type')
-        if event_type in ['customer.created', 'customer.updated']:
-            print(f"  Square Event: {event_type} - Syncing all...")
-            # Fire sync in background thread to not block webhook response
-            import threading
-            threading.Thread(target=self.engine.sync_all).start()
-        elif event_type == 'customer.deleted':
-            # Extract the deleted customer ID and propagate deletion
-            customer_id = (payload.get('data', {}).get('object', {}).get('customer', {}).get('id') or
-                           payload.get('data', {}).get('id'))
-            if customer_id:
-                print(f"  Square Event: customer.deleted - Customer ID: {customer_id}")
-                import threading
-                threading.Thread(target=self.engine.handle_square_deletion, args=(customer_id,)).start()
+            event_type = payload.get('type')
+            merchant_id = payload.get('merchant_id', 'Unknown')
+            print(f"  Event Type: {event_type} (Merchant: {merchant_id})")
+                
+            if event_type in ['customer.created', 'customer.updated']:
+                print(f"  --> Triggering background sync_all...")
+                self._run_in_background(self.engine.sync_all)
+            elif event_type == 'customer.deleted':
+                customer_id = (payload.get('data', {}).get('object', {}).get('customer', {}).get('id') or
+                               payload.get('data', {}).get('id'))
+                if customer_id:
+                    print(f"  --> Triggering background deletion for: {customer_id}")
+                    self._run_in_background(self.engine.handle_square_deletion, customer_id)
+                else:
+                    print("  --> customer.deleted received but no ID found")
             else:
-                print("  Square Event: customer.deleted - Could not extract customer ID")
-            
-        return jsonify({'status': 'received'}), 200
+                print(f"  --> Event {event_type} not handled explicitly.")
+                
+            return jsonify({'status': 'received'}), 200
+
+        except Exception as e:
+            print(f"  ❌ Error in handle_square: {e}")
+            import traceback
+            traceback.print_exc()
+            return jsonify({'status': 'error', 'message': str(e)}), 500
+
+    def _run_in_background(self, func, *args):
+        """Helper to run task in daemon thread without blocking the response."""
+        import threading
+        def wrapper():
+            try:
+                func(*args)
+            except Exception as e:
+                print(f"\n❌ [Thread-Error] Failed in {func.__name__}: {e}")
+                import traceback
+                traceback.print_exc()
+        
+        t = threading.Thread(target=wrapper, daemon=True)
+        t.start()
 
     def _verify_square_signature(self, body, signature):
         body_str = body.decode('utf-8')
