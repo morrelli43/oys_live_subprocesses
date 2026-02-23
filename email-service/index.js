@@ -101,8 +101,8 @@ On Ya Scoot Booking System
         const pushbulletPayload = {
             app: "pushbullet",
             target: "dandroid",
-            title: "New Webform Lead",
-            body: `Name: ${first_name} ${surname}\nPhone: ${number}\nIssue: ${issue}:|| ''}\n`
+            title: `Submit ${first_name}, ${issue}`,
+            body: `Name: ${first_name} ${surname}\nPhone: ${number}\nIssue: ${issue}\n`
         };
 
         fetch(process.env.PUSH_WEBHOOK_URL || 'https://hooks.morrelli43media.com/webhook/message-center', {
