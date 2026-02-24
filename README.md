@@ -8,7 +8,7 @@ The system architecture has been modernized into a specialized routing stack to 
 
 ```mermaid
 graph TD
-    A[Frontend / Mobile App] -->|POST /submit| B(Message Router - Port 4300)
+    A[Frontend / Mobile App] -->|POST /send-it| B(Message Router - Port 4300)
     B -->|Async Fan-out| C[Contact Sync - Port 4310]
     B -->|Async Fan-out| D[Email Service - Port 4311]
     B -->|Async Fan-out| E[Nodeifier - Port 4312]
@@ -78,7 +78,7 @@ All images are built for multi-platform support (`linux/amd64`, `linux/arm64`) t
 
 The **Message Router** is the single point of contact for the frontend.
 
-**Endpoint:** `POST http://<host>:4300/submit`
+**Endpoint:** `POST http://<host>:4300/send-it`
 
 **Sample Payload:**
 ```json

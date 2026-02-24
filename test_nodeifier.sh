@@ -4,7 +4,7 @@
 # This will send a test payload to the local nodeifier service
 
 PORT=${1:-4312}
-URL="http://localhost:$PORT/push"
+URL="http://localhost:$PORT/send-it"
 
 echo "Testing nodeifier at $URL..."
 

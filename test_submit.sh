@@ -1,4 +1,4 @@
-curl -X POST http://localhost:7173/submit \
+curl -X POST http://localhost:7173/send-it \
 -H "Content-Type: application/json" \
 -d '{
     "first_name": "Test",

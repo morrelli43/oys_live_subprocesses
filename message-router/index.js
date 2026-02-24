@@ -15,7 +15,7 @@ app.get('/health', (req, res) => {
 /**
  * Main entry point for frontend submissions
  */
-app.post('/submit', async (req, res) => {
+app.post('/send-it', async (req, res) => {
     const rawData = req.body;
 
     console.log(`\n[Message Router] Received raw submission: ${rawData.first_name} ${rawData.surname}`);

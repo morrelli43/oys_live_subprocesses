@@ -4,7 +4,7 @@
 # This simulates a frontend submission to the centralized router
 
 PORT=${1:-4300}
-URL="http://localhost:$PORT/submit"
+URL="http://localhost:$PORT/send-it"
 
 echo "Testing Message Router at $URL..."
 

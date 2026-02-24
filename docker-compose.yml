@@ -56,9 +56,9 @@ services:
     restart: unless-stopped
     environment:
       - PORT=4300
-      - CONTACT_SYNC_URL=http://contact-sync:4310/submit
-      - EMAIL_SERVICE_URL=http://email-service:4311/send-email
-      - NODEIFIER_URL=http://nodeifier:4312/push
+      - CONTACT_SYNC_URL=http://contact-sync:4310/send-it
+      - EMAIL_SERVICE_URL=http://email-service:4311/send-it
+      - NODEIFIER_URL=http://nodeifier:4312/send-it
     ports:
       - "${MESSAGE_ROUTER_PORT:-4300}:4300"
     depends_on:
