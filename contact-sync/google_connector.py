@@ -532,7 +532,8 @@ class GoogleContactsConnector:
             
         # User Defined Fields (Custom Fields)
         person['userDefined'] = []
-        for key in ['escooter1', 'escooter2', 'escooter3', 'secondary_address']:
+        custom_keys = [f'escooter{i}' for i in range(1, 11)] + ['secondary_address']
+        for key in custom_keys:
             val = contact.extra_fields.get(key, '')
             # Google API rejects value: "" with a 400 Invalid Argument. 
             # To delete a custom field, simply omitting it from the appended array entirely is required.

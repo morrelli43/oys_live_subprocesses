@@ -139,7 +139,7 @@ class SyncEngine:
         contact.phone = payload.get('number') or payload.get('phone') or payload.get('customer_phone') or ''
         contact.email = payload.get('email') or payload.get('customer_email') or ''
         contact.company = payload.get('company') or ''
-        contact.notes = payload.get('issue_extra') or payload.get('issue') or payload.get('notes') or ''
+        contact.notes = payload.get('notes') or payload.get('issue_extra') or payload.get('issue') or ''
 
         address_line = payload.get('address_line_1') or payload.get('address') or payload.get('addressLine1') or ''
         suburb = payload.get('suburb') or payload.get('city') or ''
@@ -167,7 +167,7 @@ class SyncEngine:
         if escooter:
             contact.extra_fields['escooter1'] = escooter
 
-        for i in range(1, 4):
+        for i in range(1, 10):
             key = f'escooter{i}'
             val = payload.get(key)
             if val:
