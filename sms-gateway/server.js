@@ -141,8 +141,8 @@ server.on('upgrade', (request, socket, head) => {
           status: 'received'
         });
 
-        // Force the URL directly to the Operations App on the docker internal network
-        const targetUrl = 'http://onya-operations-live-app:3000/api/webhooks/sms';
+        // Forward directly to the Operations App webhook
+        const targetUrl = process.env.WEB_PORTAL_INCOMING_URL || 'http://172.17.43.13:3010/api/webhooks/sms';
         try {
           // Map device payload to Onyascoot Operations format
           const forwardData = {
@@ -163,11 +163,11 @@ server.on('upgrade', (request, socket, head) => {
 
           try {
             await axios.post(targetUrl, forwardData, { headers, timeout: 5000 });
-            console.log(`🚀 Forwarded inbound SMS to internal router: ${targetUrl}`);
+            console.log(`🚀 Forwarded inbound SMS to Operations: ${targetUrl}`);
           } catch(firstErr) {
-            console.error(`⚠️ Internal DNS failed (${targetUrl}), trying public interface: 172.17.43.12:3010: ${firstErr.message}`);
-            await axios.post('http://172.17.43.12:3010/api/webhooks/sms', forwardData, { headers, timeout: 5000 });
-            console.log(`🚀 Forwarded inbound SMS to external interface: http://172.17.43.12:3010/api/webhooks/sms`);
+            console.error(`⚠️ Failed to forward to ${targetUrl}: ${firstErr.message}, trying fallback https://portal.onyascoot.com/api/webhooks/sms`);
+            await axios.post('https://portal.onyascoot.com/api/webhooks/sms', forwardData, { headers, timeout: 5000 });
+            console.log(`🚀 Forwarded inbound SMS to external interface: https://portal.onyascoot.com/api/webhooks/sms`);
           }
         } catch (err) {
           console.error(`❌ Error forwarding inbound SMS: ${err.message}`);
