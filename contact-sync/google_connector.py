@@ -438,19 +438,35 @@ class GoogleContactsConnector:
         current = self._retry_api_call(
             self.service.people().get(
                 resourceName=resource_name,
-                personFields='names'
+                personFields='names,emailAddresses,phoneNumbers,organizations,addresses,biographies,userDefined,metadata'
             ).execute
         )
         
         person['etag'] = current.get('etag')
         
-        self._retry_api_call(
-            self.service.people().updateContact(
-                resourceName=resource_name,
-                updatePersonFields='names,emailAddresses,phoneNumbers,organizations,addresses,biographies,userDefined',
-                body=person
-            ).execute
-        )
+        try:
+            self._retry_api_call(
+                self.service.people().updateContact(
+                    resourceName=resource_name,
+                    updatePersonFields='names,emailAddresses,phoneNumbers,organizations,addresses,biographies,userDefined',
+                    body=person
+                ).execute
+            )
+        except Exception as exc:
+            # If etag changed concurrently, re-fetch etag and retry once
+            if 'etag' in str(exc).lower():
+                current = self.service.people().get(
+                    resourceName=resource_name,
+                    personFields='names,emailAddresses,phoneNumbers,organizations,addresses,biographies,userDefined,metadata'
+                ).execute()
+                person['etag'] = current.get('etag')
+                self.service.people().updateContact(
+                    resourceName=resource_name,
+                    updatePersonFields='names,emailAddresses,phoneNumbers,organizations,addresses,biographies,userDefined',
+                    body=person
+                ).execute()
+            else:
+                raise
     
     def _contact_to_person(self, contact: Contact) -> dict:
         """Convert Contact to Google person object."""
